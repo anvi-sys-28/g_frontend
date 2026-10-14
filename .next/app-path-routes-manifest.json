@@ -1,16 +1,16 @@
 {
-  "/_not-found/page": "/_not-found",
-  "/api/casino/admin/users/route": "/api/casino/admin/users",
-  "/api/casino/play/route": "/api/casino/play",
   "/api/casino/admin/requests/route": "/api/casino/admin/requests",
+  "/_not-found/page": "/_not-found",
   "/api/casino/admin/user/[userId]/route": "/api/casino/admin/user/[userId]",
   "/api/casino/auth/route": "/api/casino/auth",
-  "/api/casino/admin/allot-coins/route": "/api/casino/admin/allot-coins",
   "/api/casino/user/request-coins/route": "/api/casino/user/request-coins",
+  "/api/casino/play/route": "/api/casino/play",
+  "/api/casino/admin/allot-coins/route": "/api/casino/admin/allot-coins",
+  "/api/casino/admin/users/route": "/api/casino/admin/users",
   "/admin/page": "/admin",
-  "/login/page": "/login",
-  "/intro/page": "/intro",
-  "/casino/page": "/casino",
   "/dev/components/page": "/dev/components",
+  "/intro/page": "/intro",
+  "/login/page": "/login",
+  "/casino/page": "/casino",
   "/page": "/"
 }

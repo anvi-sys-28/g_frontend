@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "prisma generate && cross-env NODE_OPTIONS=--max-old-space-size=4096 next build",
-    "start": "next start -p 3001",
+    "prebuild": "node -e \"const fs=require('fs'); try{fs.chmodSync('node_modules/.bin/prisma', 0o755); fs.chmodSync('node_modules/.bin/next', 0o755);}catch(e){}\"",
+    "build": "node node_modules/prisma/build/index.js generate && node node_modules/next/dist/bin/next build",
+    "start": "node node_modules/next/dist/bin/next start -p 3001",
     "lint": "next lint"
   },
   "dependencies": {

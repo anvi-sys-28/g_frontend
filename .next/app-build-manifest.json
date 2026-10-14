@@ -7,6 +7,13 @@
       "static/chunks/main-app-ec4d24c9befb7619.js",
       "static/chunks/app/_not-found/page-4c4d11a9552cab4c.js"
     ],
+    "/api/casino/admin/requests/route": [
+      "static/chunks/webpack-2b7467537229c821.js",
+      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
+      "static/chunks/139-67d3967ab77aa4e1.js",
+      "static/chunks/main-app-ec4d24c9befb7619.js",
+      "static/chunks/app/api/casino/admin/requests/route-4f7ea87c432350a2.js"
+    ],
     "/layout": [
       "static/chunks/webpack-2b7467537229c821.js",
       "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
@@ -16,27 +23,6 @@
       "static/chunks/536-3cefb8c7b717087d.js",
       "static/chunks/62-c711007b58beba64.js",
       "static/chunks/app/layout-5ba51f83f6a1bce9.js"
-    ],
-    "/api/casino/admin/users/route": [
-      "static/chunks/webpack-2b7467537229c821.js",
-      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
-      "static/chunks/139-67d3967ab77aa4e1.js",
-      "static/chunks/main-app-ec4d24c9befb7619.js",
-      "static/chunks/app/api/casino/admin/users/route-4f7ea87c432350a2.js"
-    ],
-    "/api/casino/play/route": [
-      "static/chunks/webpack-2b7467537229c821.js",
-      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
-      "static/chunks/139-67d3967ab77aa4e1.js",
-      "static/chunks/main-app-ec4d24c9befb7619.js",
-      "static/chunks/app/api/casino/play/route-4f7ea87c432350a2.js"
-    ],
-    "/api/casino/admin/requests/route": [
-      "static/chunks/webpack-2b7467537229c821.js",
-      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
-      "static/chunks/139-67d3967ab77aa4e1.js",
-      "static/chunks/main-app-ec4d24c9befb7619.js",
-      "static/chunks/app/api/casino/admin/requests/route-4f7ea87c432350a2.js"
     ],
     "/api/casino/admin/user/[userId]/route": [
       "static/chunks/webpack-2b7467537229c821.js",
@@ -52,6 +38,20 @@
       "static/chunks/main-app-ec4d24c9befb7619.js",
       "static/chunks/app/api/casino/auth/route-4f7ea87c432350a2.js"
     ],
+    "/api/casino/user/request-coins/route": [
+      "static/chunks/webpack-2b7467537229c821.js",
+      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
+      "static/chunks/139-67d3967ab77aa4e1.js",
+      "static/chunks/main-app-ec4d24c9befb7619.js",
+      "static/chunks/app/api/casino/user/request-coins/route-4f7ea87c432350a2.js"
+    ],
+    "/api/casino/play/route": [
+      "static/chunks/webpack-2b7467537229c821.js",
+      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
+      "static/chunks/139-67d3967ab77aa4e1.js",
+      "static/chunks/main-app-ec4d24c9befb7619.js",
+      "static/chunks/app/api/casino/play/route-4f7ea87c432350a2.js"
+    ],
     "/api/casino/admin/allot-coins/route": [
       "static/chunks/webpack-2b7467537229c821.js",
       "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
@@ -59,12 +59,12 @@
       "static/chunks/main-app-ec4d24c9befb7619.js",
       "static/chunks/app/api/casino/admin/allot-coins/route-4f7ea87c432350a2.js"
     ],
-    "/api/casino/user/request-coins/route": [
+    "/api/casino/admin/users/route": [
       "static/chunks/webpack-2b7467537229c821.js",
       "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
       "static/chunks/139-67d3967ab77aa4e1.js",
       "static/chunks/main-app-ec4d24c9befb7619.js",
-      "static/chunks/app/api/casino/user/request-coins/route-4f7ea87c432350a2.js"
+      "static/chunks/app/api/casino/admin/users/route-4f7ea87c432350a2.js"
     ],
     "/admin/page": [
       "static/chunks/webpack-2b7467537229c821.js",
@@ -74,13 +74,14 @@
       "static/chunks/536-3cefb8c7b717087d.js",
       "static/chunks/app/admin/page-a94a22646420d7e9.js"
     ],
-    "/login/page": [
+    "/dev/components/page": [
       "static/chunks/webpack-2b7467537229c821.js",
       "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
       "static/chunks/139-67d3967ab77aa4e1.js",
       "static/chunks/main-app-ec4d24c9befb7619.js",
-      "static/chunks/466-366d3550334fa4d7.js",
-      "static/chunks/app/login/page-7304c0dfd02022c6.js"
+      "static/chunks/536-3cefb8c7b717087d.js",
+      "static/chunks/702-bb8f412c31c7630b.js",
+      "static/chunks/app/dev/components/page-29ac04d255366640.js"
     ],
     "/intro/page": [
       "static/chunks/webpack-2b7467537229c821.js",
@@ -88,6 +89,14 @@
       "static/chunks/139-67d3967ab77aa4e1.js",
       "static/chunks/main-app-ec4d24c9befb7619.js",
       "static/chunks/app/intro/page-762b68bdd4d10d2b.js"
+    ],
+    "/login/page": [
+      "static/chunks/webpack-2b7467537229c821.js",
+      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
+      "static/chunks/139-67d3967ab77aa4e1.js",
+      "static/chunks/main-app-ec4d24c9befb7619.js",
+      "static/chunks/466-366d3550334fa4d7.js",
+      "static/chunks/app/login/page-7304c0dfd02022c6.js"
     ],
     "/casino/page": [
       "static/chunks/webpack-2b7467537229c821.js",
@@ -98,15 +107,6 @@
       "static/chunks/536-3cefb8c7b717087d.js",
       "static/chunks/777-eca48653b1aa14b0.js",
       "static/chunks/app/casino/page-4a1077b5cddf3279.js"
-    ],
-    "/dev/components/page": [
-      "static/chunks/webpack-2b7467537229c821.js",
-      "static/chunks/b78f93a8-e5ce7ca38c023c83.js",
-      "static/chunks/139-67d3967ab77aa4e1.js",
-      "static/chunks/main-app-ec4d24c9befb7619.js",
-      "static/chunks/536-3cefb8c7b717087d.js",
-      "static/chunks/702-bb8f412c31c7630b.js",
-      "static/chunks/app/dev/components/page-29ac04d255366640.js"
     ],
     "/page": [
       "static/chunks/webpack-2b7467537229c821.js",
