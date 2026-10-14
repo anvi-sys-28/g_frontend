@@ -25,6 +25,11 @@ const nextConfig = {
         source: '/api/matches/:path*',
         destination: `${backendUrl}/api/matches/:path*`,
       },
+      // Casino endpoints served by Railway backend (Postgres database)
+      {
+        source: '/api/casino/:path*',
+        destination: `${backendUrl}/api/casino/:path*`,
+      },
       // Generic backend proxy
       {
         source: '/api/backend/:path*',

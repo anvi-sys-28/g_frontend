@@ -26,6 +26,8 @@ import {
   Dices,
   Shield,
   LogOut,
+  Lock,
+  KeyRound,
 } from 'lucide-react';
 
 interface CasinoUserStat {
@@ -107,6 +109,14 @@ interface UserDetailHistory {
 export default function CasinoAdminPage() {
   const router = useRouter();
 
+  // Admin Gate State
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [adminLoginUser, setAdminLoginUser] = useState('admin');
+  const [adminLoginPassword, setAdminLoginPassword] = useState('');
+  const [adminAuthError, setAdminAuthError] = useState('');
+  const [adminAuthLoading, setAdminAuthLoading] = useState(false);
+
   // Tab State
   const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'games'>('users');
   const [searchQuery, setSearchQuery] = useState('');
@@ -161,20 +171,88 @@ export default function CasinoAdminPage() {
     }
   }, []);
 
+  // Check admin session on mount
   useEffect(() => {
-    // Check local admin privilege
     try {
-      const role = localStorage.getItem('playin_role');
-      const auth = localStorage.getItem('playin_auth');
-      if (!auth || role !== 'ADMIN') {
-        // Allow access but log warning, or can login
+      const session = sessionStorage.getItem('playin_admin_session');
+      if (session === 'true') {
+        setIsAdminAuthenticated(true);
+        fetchData();
       }
     } catch {}
+    setIsCheckingSession(false);
+  }, [fetchData]);
 
-    fetchData();
+  // Periodic refresh when authenticated
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
     const interval = setInterval(fetchData, 8000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [isAdminAuthenticated, fetchData]);
+
+  // Admin Gate Login Handler
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminAuthError('');
+
+    const cleanUser = adminLoginUser.trim();
+    const cleanPass = adminLoginPassword.trim();
+
+    if (!cleanUser || !cleanPass) {
+      setAdminAuthError('Please enter both Admin ID and Password');
+      return;
+    }
+
+    setAdminAuthLoading(true);
+    try {
+      // Direct fastify backend or local proxy auth
+      const res = await fetch('/api/casino/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: cleanUser, password: cleanPass }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && (data.user?.role === 'ADMIN' || (cleanUser.toLowerCase() === 'admin' && cleanPass === 'admin123'))) {
+        sessionStorage.setItem('playin_admin_session', 'true');
+        sessionStorage.setItem('playin_admin_user', cleanUser);
+        setIsAdminAuthenticated(true);
+        fetchData();
+      } else if (cleanUser.toLowerCase() === 'admin' && cleanPass === 'admin123') {
+        // Fallback authorization for master admin
+        sessionStorage.setItem('playin_admin_session', 'true');
+        sessionStorage.setItem('playin_admin_user', 'admin');
+        setIsAdminAuthenticated(true);
+        fetchData();
+      } else {
+        setAdminAuthError(data.error || 'Access Denied: Invalid Admin Credentials');
+      }
+    } catch {
+      // In case backend is offline, verify against admin / admin123
+      if (cleanUser.toLowerCase() === 'admin' && cleanPass === 'admin123') {
+        sessionStorage.setItem('playin_admin_session', 'true');
+        sessionStorage.setItem('playin_admin_user', 'admin');
+        setIsAdminAuthenticated(true);
+        fetchData();
+      } else {
+        setAdminAuthError('Access Denied: Invalid Admin credentials');
+      }
+    } finally {
+      setAdminAuthLoading(false);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    try {
+      sessionStorage.removeItem('playin_admin_session');
+      sessionStorage.removeItem('playin_admin_user');
+      localStorage.removeItem('playin_role');
+      localStorage.removeItem('playin_auth');
+    } catch {}
+    setIsAdminAuthenticated(false);
+    setAdminLoginPassword('');
+  };
 
   // Create User Handler
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -312,6 +390,120 @@ export default function CasinoAdminPage() {
   const totalGamesPlayed = users.reduce((acc, u) => acc + u.totalGames, 0);
   const pendingRequestsCount = requests.filter((r) => r.status === 'PENDING').length;
 
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="relative min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4">
+        {/* Glow */}
+        <div className="fixed inset-0 pointer-events-none opacity-30">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-500/15 rounded-full blur-[140px]" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-md">
+          {/* Card */}
+          <div className="rounded-3xl bg-neutral-900/90 border border-amber-500/30 p-8 shadow-2xl backdrop-blur-2xl space-y-6">
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="inline-flex p-3.5 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-lg shadow-amber-500/20 mb-2">
+                <Shield className="w-8 h-8" />
+              </div>
+              <h1 className="text-2xl font-black text-white tracking-tight">
+                Casino Master Admin
+              </h1>
+              <p className="text-xs text-neutral-400">
+                Restricted portal. Enter administrator credentials to proceed.
+              </p>
+            </div>
+
+            {/* Error banner */}
+            {adminAuthError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{adminAuthError}</span>
+              </div>
+            )}
+
+            {/* Login Form */}
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Admin User ID</span>
+                </label>
+                <input
+                  type="text"
+                  value={adminLoginUser}
+                  onChange={(e) => setAdminLoginUser(e.target.value)}
+                  placeholder="admin"
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-950/80 border border-white/10 focus:border-amber-400 focus:outline-none text-white text-sm placeholder:text-neutral-600 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Admin Password</span>
+                </label>
+                <input
+                  type="password"
+                  value={adminLoginPassword}
+                  onChange={(e) => setAdminLoginPassword(e.target.value)}
+                  placeholder="admin123"
+                  required
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-950/80 border border-white/10 focus:border-amber-400 focus:outline-none text-white text-sm placeholder:text-neutral-600 transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={adminAuthLoading}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-600 hover:brightness-110 active:scale-[0.99] text-black font-black text-sm shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {adminAuthLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Verifying Credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4" />
+                    <span>Authorize Admin Access</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-neutral-400">
+              <Link
+                href="/casino"
+                className="hover:text-amber-400 transition-colors flex items-center gap-1"
+              >
+                <Dices className="w-3.5 h-3.5" />
+                <span>Casino Lounge</span>
+              </Link>
+              <Link
+                href="/"
+                className="hover:text-amber-400 transition-colors flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to Live Scores</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-neutral-950 text-neutral-100 font-sans pb-16">
       {/* Background Graphic Decor */}
@@ -371,14 +563,9 @@ export default function CasinoAdminPage() {
 
             <button
               type="button"
-              onClick={() => {
-                localStorage.removeItem('playin_auth');
-                localStorage.removeItem('playin_user_id');
-                localStorage.removeItem('playin_role');
-                router.push('/login');
-              }}
+              onClick={handleAdminLogout}
               className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors"
-              title="Sign Out"
+              title="Lock Admin Portal"
             >
               <LogOut className="w-4 h-4" />
             </button>
