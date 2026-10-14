@@ -2,11 +2,17 @@
 
 import React from 'react';
 
-export function PlayinExchangeLogo({ className = '' }: { className?: string }) {
+export function PlayinExchangeLogo({
+  className = '',
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   return (
     <div className={`flex flex-col items-center justify-center select-none ${className}`}>
       {/* Top Golden Crest / Emblem */}
-      <div className="relative w-20 h-20 mb-2 flex items-center justify-center">
+      <div className={`relative ${compact ? 'w-12 h-12 mb-1' : 'w-14 h-14 sm:w-18 sm:h-18 mb-1 sm:mb-2'} flex items-center justify-center`}>
         <svg
           viewBox="0 0 100 100"
           className="w-full h-full drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]"
@@ -66,17 +72,17 @@ export function PlayinExchangeLogo({ className = '' }: { className?: string }) {
       </div>
 
       {/* Brand Title with Gold Horizontal Accent Lines */}
-      <div className="w-full flex items-center justify-center gap-3">
-        <div className="h-[1px] flex-1 max-w-[60px] bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-[#FFDF73]" />
+      <div className="w-full flex items-center justify-center gap-2 sm:gap-3">
+        <div className={`h-[1px] flex-1 ${compact ? 'max-w-[35px]' : 'max-w-[45px] sm:max-w-[60px]'} bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-[#FFDF73]`} />
         <div className="flex flex-col items-center">
-          <span className="text-xl md:text-2xl font-black tracking-widest text-white uppercase drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">
+          <span className={`${compact ? 'text-sm' : 'text-base sm:text-xl md:text-2xl'} font-black tracking-widest text-white uppercase drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]`}>
             PLAYIN
           </span>
-          <span className="text-xs md:text-sm font-extrabold tracking-[0.25em] text-[#D4AF37] uppercase -mt-1 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]">
+          <span className={`${compact ? 'text-[9px]' : 'text-[10px] sm:text-xs md:text-sm'} font-extrabold tracking-[0.25em] text-[#D4AF37] uppercase -mt-0.5 sm:-mt-1 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]`}>
             EXCHANGE
           </span>
         </div>
-        <div className="h-[1px] flex-1 max-w-[60px] bg-gradient-to-l from-transparent via-[#D4AF37]/60 to-[#FFDF73]" />
+        <div className={`h-[1px] flex-1 ${compact ? 'max-w-[35px]' : 'max-w-[45px] sm:max-w-[60px]'} bg-gradient-to-l from-transparent via-[#D4AF37]/60 to-[#FFDF73]`} />
       </div>
     </div>
   );

@@ -65,14 +65,8 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemo = (user = 'vip_player', pass = 'pass123') => {
-    setUsername(user);
-    setPassword(pass);
-    setErrorMessage('');
-  };
-
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center lg:justify-end overflow-hidden bg-black select-none">
+    <div className="relative min-h-[100dvh] w-full flex items-end lg:items-center justify-center lg:justify-end overflow-hidden bg-black select-none">
       {/* Mobile Background (< 768px): ml.webp */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -89,13 +83,13 @@ export default function LoginPage() {
         className="absolute inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none hidden md:block"
       />
 
-      {/* Dark Ambient Vignette Overlays for Maximum Contrast & Depth */}
+      {/* Ambient Vignette Overlays: Subtle on mobile so luxury background artwork is clearly visible */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/30 to-black/80 pointer-events-none hidden md:block" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10 pointer-events-none md:hidden" />
-      <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/20 to-black/70 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none md:hidden" />
+      <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/20 to-black/60 pointer-events-none" />
 
-      {/* Main Container: Mobile centers/bottom, Desktop has graphic left + card right */}
-      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 py-10 flex flex-col lg:flex-row items-center justify-end lg:justify-between gap-8 min-h-screen">
+      {/* Main Container: Mobile sits elegantly at the bottom leaving model visible, Desktop balanced */}
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pt-6 pb-5 sm:pb-8 flex flex-col lg:flex-row items-center justify-end lg:justify-between gap-6 min-h-[100dvh]">
         {/* Left Side: Spacious graphic area showing the seated model & gold coins */}
         <div className="hidden lg:flex flex-1 flex-col justify-end pb-12 pointer-events-none">
           {/* Subtle branding watermark on bottom-left */}
@@ -109,43 +103,43 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Side: Exact Glassmorphism Login Interface */}
-        <div className="w-full max-w-[480px] shrink-0">
-          <div className="relative rounded-3xl bg-neutral-950/75 border border-amber-500/35 backdrop-blur-2xl p-7 sm:p-9 shadow-2xl shadow-black/90 ring-1 ring-amber-400/20">
-            {/* Top Playin Exchange Logo */}
-            <PlayinExchangeLogo className="mb-2" />
+        {/* Right Side: Sleek, Compact Glassmorphism Login Interface */}
+        <div className="w-full max-w-[330px] sm:max-w-[370px] lg:max-w-[410px] shrink-0 mb-1 sm:mb-0">
+          <div className="relative rounded-2xl sm:rounded-3xl bg-black/65 sm:bg-neutral-950/75 border border-amber-500/30 backdrop-blur-xl p-4 sm:p-6 lg:p-7 shadow-2xl shadow-black/90 ring-1 ring-amber-400/20">
+            {/* Top Playin Exchange Logo (Compact) */}
+            <PlayinExchangeLogo compact className="mb-1" />
 
             {/* Header Titles */}
-            <div className="text-center my-4">
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <div className="text-center my-2 sm:my-3">
+              <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
                 Welcome Back
               </h1>
-              <p className="text-xs text-neutral-400 mt-1">
+              <p className="text-[11px] sm:text-xs text-neutral-400 mt-0.5">
                 Login to your account to continue
               </p>
             </div>
 
             {/* Error Message Alert */}
             {errorMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-red-950/60 border border-red-500/50 flex items-center gap-2.5 text-xs text-red-200 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <div className="mb-3 p-2.5 rounded-xl bg-red-950/70 border border-red-500/50 flex items-center gap-2 text-[11px] text-red-200 animate-in fade-in">
+                <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
 
             {/* Login Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-2.5 sm:space-y-3">
               {/* Username / ID Field */}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label
                   htmlFor="login-username"
-                  className="block text-xs font-semibold text-neutral-300"
+                  className="block text-[11px] sm:text-xs font-semibold text-neutral-300"
                 >
                   Username / ID
                 </label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-3.5 text-neutral-400 pointer-events-none">
-                    <User className="w-4 h-4" />
+                  <div className="absolute left-3 text-neutral-400 pointer-events-none">
+                    <User className="w-3.5 h-3.5" />
                   </div>
                   <input
                     id="login-username"
@@ -155,22 +149,22 @@ export default function LoginPage() {
                     placeholder="Enter your ID"
                     required
                     autoComplete="username"
-                    className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm rounded-xl bg-neutral-900/80 border border-neutral-700/80 text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all"
+                    className="w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl bg-neutral-900/80 border border-neutral-700/80 text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 transition-all"
                   />
                 </div>
               </div>
 
               {/* Password Field */}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label
                   htmlFor="login-password"
-                  className="block text-xs font-semibold text-neutral-300"
+                  className="block text-[11px] sm:text-xs font-semibold text-neutral-300"
                 >
                   Password
                 </label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-3.5 text-neutral-400 pointer-events-none">
-                    <Lock className="w-4 h-4" />
+                  <div className="absolute left-3 text-neutral-400 pointer-events-none">
+                    <Lock className="w-3.5 h-3.5" />
                   </div>
                   <input
                     id="login-password"
@@ -180,37 +174,37 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     required
                     autoComplete="current-password"
-                    className="w-full pl-10 pr-10 py-3 text-xs sm:text-sm rounded-xl bg-neutral-900/80 border border-neutral-700/80 text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all"
+                    className="w-full pl-9 pr-9 py-2 sm:py-2.5 text-xs sm:text-sm rounded-xl bg-neutral-900/80 border border-neutral-700/80 text-white placeholder-neutral-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/30 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-3.5 text-neutral-400 hover:text-white transition-colors"
+                    className="absolute right-3 text-neutral-400 hover:text-white transition-colors"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
+                      <EyeOff className="w-3.5 h-3.5" />
                     ) : (
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5" />
                     )}
                   </button>
                 </div>
               </div>
 
               {/* Remember Me & Forgot Password Row */}
-              <div className="flex items-center justify-between text-xs pt-0.5">
-                <label className="flex items-center gap-2 cursor-pointer text-neutral-300 select-none">
+              <div className="flex items-center justify-between text-[11px] sm:text-xs pt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer text-neutral-300 select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0 accent-amber-500"
+                    className="w-3.5 h-3.5 rounded border-neutral-600 bg-neutral-900 text-amber-500 focus:ring-amber-400 focus:ring-offset-0 accent-amber-500"
                   />
                   <span>Remember me</span>
                 </label>
                 <button
                   type="button"
-                  onClick={() => alert('Password reset link has been dispatched to your registered recovery contact.')}
+                  onClick={() => alert('Please contact Casino Admin to reset your password.')}
                   className="text-amber-400 hover:text-amber-300 font-semibold transition-colors hover:underline"
                 >
                   Forgot Password?
@@ -221,71 +215,18 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-3.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-black bg-gradient-to-r from-[#D4AF37] via-[#FFDF73] to-[#AA771C] hover:brightness-110 active:scale-[0.99] transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                className="w-full mt-1.5 py-2.5 sm:py-3 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-black bg-gradient-to-r from-[#D4AF37] via-[#FFDF73] to-[#AA771C] hover:brightness-110 active:scale-[0.99] transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-black" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
                     <span>Signing in...</span>
                   </>
                 ) : (
                   <span>LOGIN</span>
                 )}
               </button>
-
-              {/* Quick Fill Player Demo Helper Button */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('vip_player', 'pass123')}
-                  className="w-full py-2.5 px-3 rounded-xl font-bold text-[11px] uppercase tracking-wider text-amber-300 bg-neutral-900/90 border border-amber-500/40 hover:bg-neutral-800 hover:border-amber-400 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                >
-                  <span>🎰 Player Preset (Demo)</span>
-                </button>
-              </div>
-
-              {/* Skip Login for Testing */}
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    sessionStorage.setItem('playin_intro_seen', 'true');
-                    sessionStorage.setItem('playin_session_active', 'true');
-                    localStorage.setItem('playin_auth', 'true');
-                    localStorage.setItem('playin_user_id', 'TEST_GUEST');
-                    localStorage.setItem('playin_role', 'PLAYER');
-                    localStorage.setItem('playin_coins', '10000');
-                    window.dispatchEvent(new Event('playin_auth_changed'));
-                  } catch (e) {}
-                  router.push('/');
-                }}
-                className="w-full py-2.5 px-3 rounded-xl font-bold text-xs uppercase tracking-wider text-neutral-200 bg-white/10 hover:bg-white/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border border-white/20 shadow-md"
-              >
-                <span>⚡ Skip Login (Instant Access) ➔</span>
-              </button>
             </form>
-
-            {/* Footer: Sign Up & Replay Intro */}
-            <div className="mt-5 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-neutral-400">
-              <div>
-                Don&apos;t have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo()}
-                  className="text-amber-400 font-bold hover:text-amber-300 hover:underline transition-colors"
-                >
-                  Sign Up
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => router.push('/intro')}
-                className="text-neutral-400 hover:text-white transition-colors underline"
-              >
-                Replay Intro
-              </button>
-            </div>
           </div>
         </div>
       </div>
