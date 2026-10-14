@@ -12,9 +12,19 @@ interface MatchCardProps {
   match: Match;
   variant?: 'carousel' | 'list';
   className?: string;
+  cardIndex?: number;
+  bgImage?: string;
 }
 
-export function MatchCard({ match, variant = 'carousel', className = '' }: MatchCardProps) {
+const listVisuals = ['/mb3.webp', '/mb2.webp', '/mb1.webp'];
+
+export function MatchCard({
+  match,
+  variant = 'carousel',
+  className = '',
+  cardIndex = 0,
+  bgImage,
+}: MatchCardProps) {
   const isLive = match.status === 'live';
   const isFinished = match.status === 'completed';
   const isUpcoming = match.status === 'upcoming';
@@ -32,6 +42,9 @@ export function MatchCard({ match, variant = 'carousel', className = '' }: Match
   // Live top matches get red star border; all other matches get gold star border
   const isRedBorder = isLive && variant === 'carousel';
 
+  // Select mb3.webp, mb2.webp, mb1.webp for boxes under All Matches & Series
+  const selectedBg = bgImage || listVisuals[cardIndex % listVisuals.length];
+
   const cardContent = (
     <Link
       href={`/match/${match.id}`}
@@ -40,11 +53,18 @@ export function MatchCard({ match, variant = 'carousel', className = '' }: Match
       {/* Background Stadium Atmosphere Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-black/60 pointer-events-none" />
 
-      {/* Right Watermark for list cards matching screenshot (trophy artwork) */}
+      {/* Background Artwork for List Boxes (mb1.webp, mb2.webp, mb3.webp) matching reference */}
       {variant === 'list' && (
-        <div className="absolute right-0 bottom-0 top-0 w-28 pointer-events-none opacity-20 overflow-hidden flex items-center justify-end pr-1">
+        <div className="absolute right-0 top-0 bottom-0 w-3/5 sm:w-1/2 pointer-events-none overflow-hidden flex items-center justify-end">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mb3.webp" alt="Trophy" className="h-full object-cover object-right" />
+          <img
+            src={selectedBg}
+            alt="Match Stadium Visual"
+            className="w-full h-full object-cover object-right opacity-60 mix-blend-screen scale-105 transition-transform duration-500 group-hover:scale-110"
+          />
+          {/* Left smooth fade gradient so team text & scores remain 100% legible */}
+          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-transparent to-neutral-950/30" />
         </div>
       )}
 

@@ -545,11 +545,16 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
                     </div>
                   </button>
 
-                  {/* Body: Match cards inside series with Gold StarBorder */}
+                  {/* Body: Match cards inside series with Gold StarBorder and mb1, mb2, mb3 visuals */}
                   {!isCollapsed && (
                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-neutral-950/60">
-                      {group.matches.map((match) => (
-                        <MatchCard key={match.id} match={match} variant="list" />
+                      {group.matches.map((match, matchIndex) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          variant="list"
+                          cardIndex={matchIndex}
+                        />
                       ))}
                     </div>
                   )}
