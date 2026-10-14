@@ -16,6 +16,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.star-border.flex-col,
+.star-border[class*="flex-col"] {
+  flex-direction: column !important;
+}
+
 .star-border::before {
   content: '';
   position: absolute;

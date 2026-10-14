@@ -496,9 +496,10 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
           </div>
 
           <div className="space-y-4">
-            {displayedSeriesGroups.map((group) => {
+            {displayedSeriesGroups.map((group, groupIndex) => {
               const isCollapsed = collapsedSeries[group.name] ?? false;
               const hasGroupLive = group.matches.some((m) => m.status === 'live');
+              const seriesVisual = ['/mb3.webp', '/mb2.webp', '/mb1.webp'][groupIndex % 3];
 
               return (
                 <StarBorder
@@ -511,53 +512,69 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
                   radius={18}
                   glow={0.65}
                   sparkle={true}
-                  className="w-full rounded-2xl overflow-hidden bg-neutral-950/90 shadow-xl"
+                  className="w-full flex-col rounded-2xl overflow-hidden bg-neutral-950/90 shadow-xl relative"
                 >
-                  {/* Collapsible Header with Trophy Icon */}
-                  <button
-                    onClick={() => toggleSeriesCollapse(group.name)}
-                    className="w-full bg-gradient-to-r from-amber-950/40 via-neutral-900/80 to-neutral-950/80 px-4 py-3.5 flex items-center justify-between border-b border-amber-500/20 hover:bg-amber-900/20 transition-all text-left"
-                  >
-                    <div className="flex items-center gap-3 truncate pr-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-900/40 border border-amber-500/40 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                        <span className="text-base">🏆</span>
-                      </div>
-                      <span className="text-sm font-bold text-white truncate">{group.name}</span>
-                      <span className="text-xs text-amber-400 font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-                        ({group.matches.length})
-                      </span>
-                      {hasGroupLive && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white uppercase animate-pulse shadow-xs">
-                          LIVE
+                  {/* Background Stadium Image (mb3.webp, mb2.webp, mb1.webp) on the Series Box */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={seriesVisual}
+                      alt={group.name}
+                      className="w-full h-full object-cover object-right opacity-50 mix-blend-screen scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/75 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-transparent to-neutral-950/50" />
+                  </div>
+
+                  {/* Guaranteed Column Container for Vertical Stacking */}
+                  <div className="w-full flex flex-col relative z-10">
+                    {/* Collapsible Header with Trophy Icon */}
+                    <button
+                      onClick={() => toggleSeriesCollapse(group.name)}
+                      className="w-full bg-gradient-to-r from-amber-950/60 via-neutral-900/80 to-transparent px-4 py-3.5 flex items-center justify-between border-b border-amber-500/20 hover:bg-amber-900/30 transition-all text-left"
+                    >
+                      <div className="flex items-center gap-3 truncate pr-2">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400/20 to-amber-900/40 border border-amber-500/40 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                          <span className="text-base">🏆</span>
+                        </div>
+                        <span className="text-sm font-bold text-white truncate">{group.name}</span>
+                        <span className="text-xs text-amber-400 font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                          ({group.matches.length})
                         </span>
-                      )}
-                    </div>
+                        {hasGroupLive && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white uppercase animate-pulse shadow-xs">
+                            LIVE
+                          </span>
+                        )}
+                      </div>
 
-                    <div className="flex items-center gap-1.5 text-xs text-amber-400 shrink-0">
-                      <span className="hidden sm:inline font-medium">
-                        {isCollapsed ? 'Expand' : 'Collapse'}
-                      </span>
-                      {isCollapsed ? (
-                        <ChevronDown className="w-4 h-4 text-amber-400" />
-                      ) : (
-                        <ChevronUp className="w-4 h-4 text-amber-400" />
-                      )}
-                    </div>
-                  </button>
+                      <div className="flex items-center gap-1.5 text-xs text-amber-400 shrink-0">
+                        <span className="hidden sm:inline font-medium">
+                          {isCollapsed ? 'Expand' : 'Collapse'}
+                        </span>
+                        {isCollapsed ? (
+                          <ChevronDown className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <ChevronUp className="w-4 h-4 text-amber-400" />
+                        )}
+                      </div>
+                    </button>
 
-                  {/* Body: Match cards inside series with Gold StarBorder and mb1, mb2, mb3 visuals */}
-                  {!isCollapsed && (
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-neutral-950/60">
-                      {group.matches.map((match, matchIndex) => (
-                        <MatchCard
-                          key={match.id}
-                          match={match}
-                          variant="list"
-                          cardIndex={matchIndex}
-                        />
-                      ))}
-                    </div>
-                  )}
+                    {/* Body: Match cards inside series with Gold StarBorder and mb1, mb2, mb3 visuals */}
+                    {!isCollapsed && (
+                      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-neutral-950/40">
+                        {group.matches.map((match, matchIndex) => (
+                          <MatchCard
+                            key={match.id}
+                            match={match}
+                            variant="list"
+                            cardIndex={matchIndex}
+                            bgImage={['/mb3.webp', '/mb2.webp', '/mb1.webp'][(groupIndex + matchIndex) % 3]}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </StarBorder>
               );
             })}
