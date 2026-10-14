@@ -41,7 +41,6 @@ export function CricketBatBallIcon({ className = 'w-7 h-7' }: { className?: stri
       <line x1="22" y1="12" x2="24" y2="14" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
 
       {/* Bat Shoulders & Willow Blade */}
-      {/* Main Blade Body */}
       <path
         d="M 21.5 13.5
            L 24.5 16.5
@@ -151,6 +150,32 @@ export function AceCardIcon({ className = 'w-7 h-7' }: { className?: string }) {
            C 24.2 18.5 21.4 16 19.2 13
            Q 18.6 12.2 18 13 Z"
         fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Authentic Person / User Profile SVG Icon.
+ */
+export function ProfilePersonIcon({ className = 'w-7 h-7' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 36 36"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Head */}
+      <circle cx="18" cy="11.5" r="5.5" stroke="currentColor" strokeWidth="2.4" fill="none" />
+      {/* Torso / Shoulders */}
+      <path
+        d="M7.5 28.5 C7.5 22.8 12.2 19.5 18 19.5 C23.8 19.5 28.5 22.8 28.5 28.5"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        fill="none"
       />
     </svg>
   );
