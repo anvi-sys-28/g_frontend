@@ -136,38 +136,40 @@ export async function getTodayMatches(): Promise<TodayMatchesResponse> {
 
   // 1. Try reading directly from Redis cache
   try {
-    if (redis.status === 'wait') {
-      await redis.connect();
-    }
+    if (redis) {
+      if (redis.status === 'wait') {
+        await redis.connect();
+      }
 
-    const [matchesRaw, metaRaw] = await Promise.all([
-      redis.get('matches:today'),
-      redis.get('matches:today:meta'),
-    ]);
+      const [matchesRaw, metaRaw] = await Promise.all([
+        redis.get('matches:today'),
+        redis.get('matches:today:meta'),
+      ]);
 
-    if (matchesRaw) {
-      const matches: Match[] = JSON.parse(matchesRaw);
-      const meta: MatchesDataMeta = metaRaw
-        ? JSON.parse(metaRaw)
-        : {
-            provider: providerConfig,
-            dailyBudget: 100,
-            usableBudget: 80,
-            callsToday: 1,
-            remainingBudget: 79,
-            lastSuccessfulFetch: new Date().toISOString(),
-            lastError: null,
-            nextScheduledPoll: null,
-            pollIntervalMs: 60000,
-            isBudgetExhausted: false,
-            totalMatches: matches.length,
-            liveMatches: matches.filter((m) => m.status === 'live').length,
-            upcomingMatches: matches.filter((m) => m.status === 'upcoming').length,
-            finishedMatches: matches.filter((m) => m.status === 'completed' || m.status === 'abandoned').length,
-            updatedAt: new Date().toISOString(),
-          };
+      if (matchesRaw) {
+        const matches: Match[] = JSON.parse(matchesRaw);
+        const meta: MatchesDataMeta = metaRaw
+          ? JSON.parse(metaRaw)
+          : {
+              provider: providerConfig,
+              dailyBudget: 100,
+              usableBudget: 80,
+              callsToday: 1,
+              remainingBudget: 79,
+              lastSuccessfulFetch: new Date().toISOString(),
+              lastError: null,
+              nextScheduledPoll: null,
+              pollIntervalMs: 60000,
+              isBudgetExhausted: false,
+              totalMatches: matches.length,
+              liveMatches: matches.filter((m) => m.status === 'live').length,
+              upcomingMatches: matches.filter((m) => m.status === 'upcoming').length,
+              finishedMatches: matches.filter((m) => m.status === 'completed' || m.status === 'abandoned').length,
+              updatedAt: new Date().toISOString(),
+            };
 
-      return { matches, meta, isMock };
+        return { matches, meta, isMock };
+      }
     }
   } catch (err: any) {
     // Redis unavailable or connection timeout, fallback to HTTP
