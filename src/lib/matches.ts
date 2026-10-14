@@ -12,6 +12,7 @@ export interface MatchesDataMeta {
   nextScheduledPoll: string | null;
   pollIntervalMs: number;
   isBudgetExhausted: boolean;
+  isAllKeysExhausted?: boolean;
   totalMatches: number;
   liveMatches: number;
   upcomingMatches: number;

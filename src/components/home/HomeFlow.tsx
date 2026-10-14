@@ -110,9 +110,9 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
           className="absolute inset-0 w-full h-full object-cover object-center hidden md:block"
         />
 
-        {/* Atmospheric Dark Gradient Overlays for High Contrast & Readability */}
-        <div className="absolute inset-0 bg-black/65 dark:bg-black/75 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/80 pointer-events-none" />
+        {/* Atmospheric Dark Gradient Overlays - Softened so stadium background is clearly visible */}
+        <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-black/25 pointer-events-none" />
       </div>
 
       <div className="relative z-10">

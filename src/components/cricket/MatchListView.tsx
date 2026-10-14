@@ -195,23 +195,13 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
 
   return (
     <div className="w-full">
-      {/* DEMO DATA Banner (Shown ONLY when CRICKET_PROVIDER=mock) */}
-      {isMock && (
-        <div className="bg-amber-500 text-slate-950 font-bold px-4 py-2 text-center text-xs tracking-wider uppercase shadow-inner flex items-center justify-center gap-2">
-          <span>⚠️ DEMO DATA ACTIVE</span>
-          <span className="font-normal opacity-90 lowercase text-[11px]">
-            (Set CRICKET_PROVIDER=cricketdata in .env for real live cricket)
-          </span>
-        </div>
-      )}
-
-      {/* Delayed Data / Free tier preservation banner */}
-      {isDataOld && !isMock && (
-        <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200 px-4 py-2 text-center text-xs font-medium flex items-center justify-center gap-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-          <span>Delayed live data (free tier daily budget preserved).</span>
-          <span className="text-amber-700 dark:text-amber-300">
-            Next update scheduled at {meta.nextScheduledPoll ? formatMatchTime(meta.nextScheduledPoll).timeLabel : 'soon'}.
+      {/* Notice displayed when API key quota is exhausted across all three keys */}
+      {(meta.isAllKeysExhausted || (isDataOld && !isMock)) && (
+        <div className="bg-amber-950/85 border-b border-amber-500/40 text-amber-200 px-4 py-2.5 text-center text-xs font-semibold backdrop-blur-md flex items-center justify-center gap-2 shadow-sm">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>⚠️ Limit over from all three keys.</span>
+          <span className="text-amber-400/80 text-[11px] font-normal">
+            (Daily live quota reached across all keys. Serving cached scores until next reset.)
           </span>
         </div>
       )}

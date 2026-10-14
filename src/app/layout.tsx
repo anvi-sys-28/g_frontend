@@ -58,9 +58,6 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col bg-surface text-surface-text font-sans antialiased selection:bg-brand-50 selection:text-brand-700">
         <Providers>
-          {/* Top Navigation & App Header */}
-          <AppHeader />
-
           {/* Main Content Area: dynamically handled by AppLayoutShell */}
           <AppLayoutShell>
             {children}

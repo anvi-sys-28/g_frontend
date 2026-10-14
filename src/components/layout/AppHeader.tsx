@@ -30,9 +30,8 @@ export function AppHeader() {
     };
   }, []);
 
-  // Hide AppHeader entirely on full-screen login, intro, admin portal, or when on root before login
-  if (pathname === '/login' || pathname === '/intro' || pathname.startsWith('/admin')) return null;
-  if (pathname === '/' && !isAuth) return null;
+  // Removed red AppHeader as requested
+  return null;
 
   const handleLogout = () => {
     try {
