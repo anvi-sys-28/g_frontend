@@ -16,7 +16,7 @@ export function AppHeader() {
   useEffect(() => {
     const check = () => {
       try {
-        setIsAuth(!!localStorage.getItem('playin_auth'));
+        setIsAuth(Boolean(localStorage.getItem('playin_auth') && sessionStorage.getItem('playin_session_active')));
       } catch {
         setIsAuth(true);
       }
@@ -38,6 +38,9 @@ export function AppHeader() {
     try {
       localStorage.removeItem('playin_auth');
       localStorage.removeItem('playin_user_id');
+      localStorage.removeItem('playin_role');
+      sessionStorage.removeItem('playin_session_active');
+      sessionStorage.removeItem('playin_intro_seen');
       window.dispatchEvent(new Event('playin_auth_changed'));
     } catch (e) {}
     window.location.href = '/';

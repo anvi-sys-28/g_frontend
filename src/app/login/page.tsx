@@ -45,17 +45,19 @@ export default function LoginPage() {
       }
 
       // Store authentic credentials
+      sessionStorage.setItem('playin_session_active', 'true');
       localStorage.setItem('playin_auth', 'true');
       localStorage.setItem('playin_user_id', data.user.userId);
       localStorage.setItem('playin_role', data.user.role);
       localStorage.setItem('playin_coins', String(data.user.coins));
+      window.dispatchEvent(new Event('playin_auth_changed'));
 
       setIsLoading(false);
 
       if (data.user.role === 'ADMIN') {
         router.push('/admin');
       } else {
-        router.push('/casino');
+        router.push('/');
       }
     } catch {
       setErrorMessage('Network error connecting to database server.');
@@ -248,10 +250,12 @@ export default function LoginPage() {
                 onClick={() => {
                   try {
                     sessionStorage.setItem('playin_intro_seen', 'true');
+                    sessionStorage.setItem('playin_session_active', 'true');
                     localStorage.setItem('playin_auth', 'true');
                     localStorage.setItem('playin_user_id', 'TEST_GUEST');
                     localStorage.setItem('playin_role', 'PLAYER');
                     localStorage.setItem('playin_coins', '10000');
+                    window.dispatchEvent(new Event('playin_auth_changed'));
                   } catch (e) {}
                   router.push('/');
                 }}

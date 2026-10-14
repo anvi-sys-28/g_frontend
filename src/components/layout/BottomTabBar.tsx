@@ -13,7 +13,7 @@ export function BottomTabBar() {
   React.useEffect(() => {
     const check = () => {
       try {
-        setIsAuth(!!localStorage.getItem('playin_auth'));
+        setIsAuth(Boolean(localStorage.getItem('playin_auth') && sessionStorage.getItem('playin_session_active')));
       } catch {
         setIsAuth(true);
       }

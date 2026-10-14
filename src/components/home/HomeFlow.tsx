@@ -14,29 +14,34 @@ interface HomeFlowProps {
 }
 
 export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
-  // 'checking' | 'intro' | 'login' | 'app'
-  const [currentStep, setCurrentStep] = useState<'checking' | 'intro' | 'login' | 'app'>('checking');
+  // Step 1: Always start with 'intro' by default (No loading screen, no spinner)
+  const [currentStep, setCurrentStep] = useState<'intro' | 'login' | 'app'>('intro');
 
   useEffect(() => {
     try {
+      // Check if user is actively in a session already (e.g. navigated back from /casino)
+      const isSessionActive = sessionStorage.getItem('playin_session_active');
       const isAuth = localStorage.getItem('playin_auth');
-      const introSeen = sessionStorage.getItem('playin_intro_seen');
 
-      if (isAuth) {
+      if (isSessionActive && isAuth) {
         setCurrentStep('app');
-      } else if (introSeen) {
-        setCurrentStep('login');
       } else {
+        // Fresh visit: start directly with intro video
         setCurrentStep('intro');
       }
     } catch {
-      setCurrentStep('app');
+      setCurrentStep('intro');
     }
 
     const handleAuthChange = () => {
       try {
         const isAuth = localStorage.getItem('playin_auth');
-        if (isAuth) setCurrentStep('app');
+        const isSessionActive = sessionStorage.getItem('playin_session_active');
+        if (isAuth && isSessionActive) {
+          setCurrentStep('app');
+        } else if (!isAuth) {
+          setCurrentStep('intro');
+        }
       } catch {}
     };
 
@@ -48,6 +53,7 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
     };
   }, []);
 
+  // Step 1 -> Step 2: When 60 FPS Intro Finishes or is Skipped
   const handleIntroFinish = () => {
     try {
       sessionStorage.setItem('playin_intro_seen', 'true');
@@ -55,24 +61,17 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
     setCurrentStep('login');
   };
 
+  // Step 2 -> Step 3: When Login Succeeds or Skip Login is Clicked
   const handleLoginSuccess = () => {
     try {
+      sessionStorage.setItem('playin_session_active', 'true');
       localStorage.setItem('playin_auth', 'true');
       window.dispatchEvent(new Event('playin_auth_changed'));
     } catch {}
     setCurrentStep('app');
   };
 
-  // 1. Initial State / SSR Placeholder
-  if (currentStep === 'checking') {
-    return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
-        <div className="w-12 h-12 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin" />
-      </div>
-    );
-  }
-
-  // 2. Step 1: 60 FPS Intro Video
+  // Step 1: 60 FPS Canvas Intro Video Player
   if (currentStep === 'intro') {
     return (
       <div className="fixed inset-0 z-50 bg-black">
@@ -81,7 +80,7 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
     );
   }
 
-  // 3. Step 2: Login Interface
+  // Step 2: Login Interface with ID, Password, Player Demo Preset, and Skip Login
   if (currentStep === 'login') {
     return (
       <div className="fixed inset-0 z-50 bg-black overflow-y-auto">
@@ -90,7 +89,7 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
     );
   }
 
-  // 4. Step 3: Main Cricket Dashboard with Device Backgrounds & Navigation
+  // Step 3: Main Gaming Area (Cricket Live Scores with Device Backgrounds & Navigation Bar)
   return (
     <div className="relative min-h-screen">
       {/* Background Images: mbc.webp for mobile (< 768px), pbc.webp for desktop (>= 768px) */}
