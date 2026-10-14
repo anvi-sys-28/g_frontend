@@ -1,0 +1,34 @@
+{
+  "apikey": "sample-test-key-123",
+  "data": {
+    "info": {
+      "id": "ind-pak-bilateral-2026",
+      "name": "India vs Pakistan T20I Series 2026",
+      "startDat": "2026-10-01",
+      "endDat": "2026-10-20",
+      "odi": 0,
+      "t20": 5,
+      "test": 0,
+      "squads": 2,
+      "matches": 5
+    },
+    "matchList": [
+      {
+        "id": "9a38f322-1234-4bc3-a991-897b6151f112",
+        "name": "India vs Pakistan, 4th T20I",
+        "matchType": "t20",
+        "status": "Pakistan need 43 runs in 18 balls",
+        "venue": "Dubai International Cricket Stadium, Dubai",
+        "date": "2026-10-14",
+        "dateTimeGMT": "2026-10-14T14:00:00",
+        "teams": ["India", "Pakistan"]
+      }
+    ]
+  },
+  "status": "success",
+  "info": {
+    "hitsToday": 19,
+    "hitsLimit": 100,
+    "remHits": 81
+  }
+}

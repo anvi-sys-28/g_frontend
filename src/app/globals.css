@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand */
+  --brand-600: #D7263D;
+  --brand-700: #B81D31;
+  --brand-500: #E5484D;
+  --brand-50:  #FDECEE;
+  --on-brand:  #FFFFFF;
+
+  /* Surfaces (White + Red, default) */
+  --bg:        #FFFFFF;
+  --bg-muted:  #F6F6F7;
+  --border:    #E6E7EA;
+  --text:      #111318;
+  --text-muted:#6B7280;
+
+  /* Semantic colors */
+  --win:       #15803D;
+  --loss:      #374151;
+  --danger:    #9F1239;
+  --live:      #D7263D;
+  --draw-nr:   #9CA3AF;
+}
+
+/* Black + Red Theme */
+html.dark,
+.dark {
+  --bg:        #0F1013;
+  --bg-muted:  #17181C;
+  --border:    #26282E;
+  --text:      #F3F4F6;
+  --text-muted:#9CA3AF;
+  --brand-50:  #2C1217;
+}
+
+body {
+  color: var(--text);
+  background-color: var(--bg);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom scrollbar for horizontal tab strips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

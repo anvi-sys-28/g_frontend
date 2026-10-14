@@ -1,0 +1,442 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum MatchFormat {
+  T20
+  ODI
+  TEST
+  HUNDRED
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum PlayerRole {
+  BATTER
+  BOWLER
+  ALL_ROUNDER
+  WICKET_KEEPER
+}
+
+enum EntityType {
+  TEAM
+  MATCH
+  SERIES
+}
+
+enum BowlingStyle {
+  PACE
+  SPIN
+  UNKNOWN
+}
+
+enum HistFormat {
+  T20I
+  T20
+  ODI
+  TEST
+  OTHER
+}
+
+enum HistResultType {
+  WIN
+  TIE
+  NO_RESULT
+  DRAW
+  ABANDONED
+}
+
+enum HistMarginType {
+  RUNS
+  WICKETS
+}
+
+model Team {
+  id           String       @id @default(cuid())
+  canonicalId  String?      @unique
+  name         String
+  shortName    String
+  code         String       @unique
+  gender       String       @default("male") // "male" | "female"
+  teamType     String       @default("international") // "international" | "club"
+  country      String?
+  logoUrl      String?
+  primaryColor String?
+  homeMatches  Match[]      @relation("TeamA")
+  awayMatches  Match[]      @relation("TeamB")
+  squadMembers MatchSquad[]
+  aliases      TeamAlias[]
+  histMatchesA HistMatch[]  @relation("HistTeamA")
+  histMatchesB HistMatch[]  @relation("HistTeamB")
+  histTossWon  HistMatch[]  @relation("HistTossWinner")
+  histWon      HistMatch[]  @relation("HistWinner")
+  histBatFirst HistMatch[]  @relation("HistBattingFirst")
+  histInnings  HistInnings[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([gender, teamType])
+}
+
+model TeamAlias {
+  id        String   @id @default(cuid())
+  alias     String
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  source    String   // "cricsheet" | "cricketdata" | "manual"
+  createdAt DateTime @default(now())
+
+  @@unique([alias, source])
+  @@index([alias])
+  @@index([teamId])
+}
+
+model Venue {
+  id          String       @id @default(cuid())
+  canonicalId String       @unique @default(cuid())
+  name        String
+  city        String?
+  country     String?
+  lat         Float?
+  lng         Float?
+  aliases     VenueAlias[]
+  histMatches HistMatch[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([name])
+  @@index([city])
+}
+
+model VenueAlias {
+  id        String   @id @default(cuid())
+  alias     String
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  source    String   // "cricsheet" | "cricketdata" | "manual"
+  createdAt DateTime @default(now())
+
+  @@unique([alias, source])
+  @@index([alias])
+  @@index([venueId])
+}
+
+model Player {
+  id           String        @id @default(cuid())
+  cricsheetId  String?       @unique
+  name         String
+  shortName    String
+  role         PlayerRole    @default(BATTER)
+  avatarUrl    String?
+  country      String?
+  bowlingStyle BowlingStyle  @default(UNKNOWN)
+  styleSource  String?
+  squadMatches MatchSquad[]
+  wicketsTaken HistWicket[]  @relation("WicketsTaken")
+  wicketsLost  HistWicket[]  @relation("WicketsLost")
+  bowlerStats  HistBowlerStat[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([bowlingStyle])
+}
+
+model Series {
+  id        String      @id @default(cuid())
+  name      String
+  format    MatchFormat
+  season    String
+  startDate DateTime
+  endDate   DateTime?
+  matches   Match[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Match {
+  id                   String       @id @default(cuid())
+  slug                 String       @unique
+  title                String
+  seriesId             String
+  series               Series       @relation(fields: [seriesId], references: [id])
+  format               MatchFormat
+  status               MatchStatus  @default(UPCOMING)
+  statusText           String       @default("Scheduled")
+  venue                String
+  city                 String
+  startTime            DateTime
+  teamAId              String
+  teamA                Team         @relation("TeamA", fields: [teamAId], references: [id])
+  teamBId              String
+  teamB                Team         @relation("TeamB", fields: [teamBId], references: [id])
+  tossWinnerId         String?
+  tossDecision         String?
+  winnerId             String?
+  resultText           String?
+  currentInningsNumber Int          @default(1)
+  squads               MatchSquad[]
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([status, startTime])
+  @@index([seriesId])
+}
+
+model MatchSquad {
+  id             String   @id @default(cuid())
+  matchId        String
+  match          Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId         String
+  team           Team     @relation(fields: [teamId], references: [id])
+  playerId       String
+  player         Player   @relation(fields: [playerId], references: [id])
+  isPlaying      Boolean  @default(true)
+  isCaptain      Boolean  @default(false)
+  isWicketKeeper Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+}
+
+model HistMatch {
+  id                 String          @id @default(cuid())
+  cricsheetMatchId   String          @unique
+  date               DateTime
+  season             String?
+  format             HistFormat
+  teamType           String          // "international" | "club"
+  gender             String          // "male" | "female"
+  competitionName    String?
+  stage              String?
+  matchNumber        String?
+  venueId            String
+  venue              Venue           @relation(fields: [venueId], references: [id])
+  teamAId            String
+  teamA              Team            @relation("HistTeamA", fields: [teamAId], references: [id])
+  teamBId            String
+  teamB              Team            @relation("HistTeamB", fields: [teamBId], references: [id])
+  tossWinnerId       String?
+  tossWinner         Team?           @relation("HistTossWinner", fields: [tossWinnerId], references: [id])
+  tossDecision       String?         // "bat" | "field"
+  winnerId           String?
+  winner             Team?           @relation("HistWinner", fields: [winnerId], references: [id])
+  resultType         HistResultType
+  marginType         HistMarginType?
+  marginValue        Int?
+  method             String?         // "D/L", "DLS"
+  umpires            Json?
+  referee            String?
+  battingFirstTeamId String?
+  battingFirstTeam   Team?           @relation("HistBattingFirst", fields: [battingFirstTeamId], references: [id])
+  source             String          @default("cricsheet") // "cricsheet" | "provider"
+  innings            HistInnings[]
+  wickets            HistWicket[]
+  bowlerStats        HistBowlerStat[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([teamAId, date])
+  @@index([teamBId, date])
+  @@index([venueId, date])
+  @@index([format, gender, teamType])
+  @@index([winnerId])
+  @@index([date])
+}
+
+model HistInnings {
+  id            String        @id @default(cuid())
+  matchId       String
+  match         HistMatch     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  inningsNumber Int
+  battingTeamId String
+  battingTeam   Team          @relation(fields: [battingTeamId], references: [id])
+  runs          Int
+  wickets       Int
+  balls         Int           // legal balls faced
+  oversDisplay  String        // e.g. "18.3" computed from balls
+  isSuperOver   Boolean       @default(false)
+  target        Int?
+  wicketsList   HistWicket[]
+  createdAt     DateTime      @default(now())
+
+  @@unique([matchId, inningsNumber])
+  @@index([matchId])
+  @@index([battingTeamId])
+}
+
+model HistWicket {
+  id             String      @id @default(cuid())
+  matchId        String
+  match          HistMatch   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  inningsNumber  Int
+  innings        HistInnings @relation(fields: [matchId, inningsNumber], references: [matchId, inningsNumber], onDelete: Cascade)
+  bowlerId       String?
+  bowler         Player?     @relation("WicketsTaken", fields: [bowlerId], references: [id])
+  batterOutId    String?
+  batterOut      Player?     @relation("WicketsLost", fields: [batterOutId], references: [id])
+  kind           String      // "bowled", "caught", "lbw", "run out", etc.
+  isBowlerWicket Boolean     // true for caught, bowled, lbw, stumped, caught and bowled, hit wicket
+  createdAt      DateTime    @default(now())
+
+  @@index([matchId, inningsNumber])
+  @@index([bowlerId])
+  @@index([isBowlerWicket])
+}
+
+model HistBowlerStat {
+  id            String    @id @default(cuid())
+  matchId       String
+  match         HistMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  inningsNumber Int
+  bowlerId      String
+  bowler        Player    @relation(fields: [bowlerId], references: [id], onDelete: Cascade)
+  balls         Int       // legal balls bowled
+  runsConceded  Int
+  wickets       Int       // bowler wickets
+  createdAt     DateTime  @default(now())
+
+  @@unique([matchId, inningsNumber, bowlerId])
+  @@index([matchId])
+  @@index([bowlerId])
+  @@index([matchId, inningsNumber])
+}
+
+model ImportLog {
+  id           String   @id @default(cuid())
+  fileName     String   @unique
+  fileHash     String
+  status       String   // "SUCCESS" | "FAILED" | "SKIPPED"
+  matchCount   Int      @default(0)
+  errorMessage String?
+  importedAt   DateTime @default(now())
+}
+
+model UnmappedEntity {
+  id         String   @id @default(cuid())
+  kind       String   // "team" | "venue" | "player"
+  rawValue   String
+  source     String   // "cricsheet" | "cricketdata" | "manual"
+  firstSeen  DateTime @default(now())
+  lastSeen   DateTime @default(now())
+  count      Int      @default(1)
+  resolvedTo String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([kind, rawValue, source])
+  @@index([kind, count])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  follows   Follow[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Follow {
+  id             String           @id @default(cuid())
+  subscriptionId String
+  subscription   PushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  entityType     EntityType
+  entityId       String
+  createdAt      DateTime         @default(now())
+
+  @@unique([subscriptionId, entityType, entityId])
+  @@index([entityType, entityId])
+}
+
+model ProviderCallLog {
+  id           String   @id @default(cuid())
+  providerName String
+  endpoint     String
+  statusCode   Int
+  durationMs   Int
+  success      Boolean
+  calledAt     DateTime @default(now())
+
+  @@index([providerName, calledAt])
+}
+
+// ==========================================
+// CASINO BACKEND & USER COIN SYSTEM
+// ==========================================
+
+model CasinoUser {
+  id               String            @id @default(cuid())
+  userId           String            @unique // Unique username/ID assigned by Admin
+  password         String            // Password set by Admin
+  role             String            @default("USER") // "ADMIN" | "USER"
+  coins            Int               @default(0) // Allocated coins used for bets
+  status           String            @default("ACTIVE") // "ACTIVE" | "SUSPENDED"
+  bets             CasinoBet[]
+  coinRequests     CoinRequest[]
+  coinTransactions CoinTransaction[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([role])
+}
+
+model CasinoBet {
+  id           String     @id @default(cuid())
+  casinoUserId String
+  casinoUser   CasinoUser @relation(fields: [casinoUserId], references: [id], onDelete: Cascade)
+  game         String     // "ROULETTE" | "ANDAR_BAHAR"
+  betAmount    Int        // Coins spent on this play
+  payout       Int        // Total coins returned (0 if lost)
+  won          Boolean    // Whether the player won
+  details      Json?      // Bets placed, winning number/cards, etc.
+  balanceAfter Int        // Coin balance after resolution
+  createdAt    DateTime   @default(now())
+
+  @@index([casinoUserId, createdAt])
+  @@index([game])
+  @@index([won])
+}
+
+model CoinRequest {
+  id              String     @id @default(cuid())
+  casinoUserId    String
+  casinoUser      CasinoUser @relation(fields: [casinoUserId], references: [id], onDelete: Cascade)
+  requestedAmount Int        @default(1000)
+  allocatedAmount Int?
+  status          String     @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+  reason          String?
+  adminNotes      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime   @default(now())
+
+  @@index([casinoUserId, status])
+  @@index([status, createdAt])
+}
+
+model CoinTransaction {
+  id           String     @id @default(cuid())
+  casinoUserId String
+  casinoUser   CasinoUser @relation(fields: [casinoUserId], references: [id], onDelete: Cascade)
+  amount       Int        // Positive for additions, negative for deductions
+  balanceAfter Int        // Coins balance after this operation
+  type         String     // "ADMIN_ALLOT" | "BET_SPENT" | "BET_WON" | "REQUEST_APPROVED"
+  note         String?
+  createdAt    DateTime   @default(now())
+
+  @@index([casinoUserId, createdAt])
+}
+

@@ -1,0 +1,44 @@
+{
+  "apikey": "sample-test-key-123",
+  "data": [
+    {
+      "id": "ind-pak-bilateral-2026",
+      "name": "India vs Pakistan T20I Series 2026",
+      "startDate": "2026-10-01",
+      "endDate": "2026-10-20",
+      "odi": 0,
+      "t20": 5,
+      "test": 0,
+      "squads": 2,
+      "matches": 5
+    },
+    {
+      "id": "aus-sa-odi-2026",
+      "name": "Australia tour of South Africa 2026",
+      "startDate": "2026-10-10",
+      "endDate": "2026-10-30",
+      "odi": 3,
+      "t20": 3,
+      "test": 2,
+      "squads": 2,
+      "matches": 8
+    },
+    {
+      "id": "ipl-2026",
+      "name": "Indian Premier League 2026",
+      "startDate": "2026-03-25",
+      "endDate": "2026-05-28",
+      "odi": 0,
+      "t20": 74,
+      "test": 0,
+      "squads": 10,
+      "matches": 74
+    }
+  ],
+  "status": "success",
+  "info": {
+    "hitsToday": 18,
+    "hitsLimit": 100,
+    "remHits": 82
+  }
+}
