@@ -14,7 +14,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Shield,
   TrendingUp,
   RefreshCw,
   Award,
@@ -300,15 +299,6 @@ export default function CasinoPage() {
               <Send className="w-3.5 h-3.5" />
               <span>Request Coins</span>
             </button>
-
-            {/* Admin Portal Link */}
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs border border-amber-400/30 transition-all shadow-md"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin Portal</span>
-            </Link>
 
             <Link
               href="/"
