@@ -1,16 +1,16 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/api/casino/admin/user/[userId]/route": "app/api/casino/admin/user/[userId]/route.js",
-  "/api/casino/admin/allot-coins/route": "app/api/casino/admin/allot-coins/route.js",
+  "/api/casino/admin/users/route": "app/api/casino/admin/users/route.js",
   "/api/casino/play/route": "app/api/casino/play/route.js",
   "/api/casino/admin/requests/route": "app/api/casino/admin/requests/route.js",
-  "/api/casino/admin/users/route": "app/api/casino/admin/users/route.js",
-  "/api/casino/user/request-coins/route": "app/api/casino/user/request-coins/route.js",
+  "/api/casino/admin/user/[userId]/route": "app/api/casino/admin/user/[userId]/route.js",
   "/api/casino/auth/route": "app/api/casino/auth/route.js",
+  "/api/casino/admin/allot-coins/route": "app/api/casino/admin/allot-coins/route.js",
+  "/api/casino/user/request-coins/route": "app/api/casino/user/request-coins/route.js",
   "/admin/page": "app/admin/page.js",
+  "/login/page": "app/login/page.js",
   "/intro/page": "app/intro/page.js",
   "/casino/page": "app/casino/page.js",
   "/dev/components/page": "app/dev/components/page.js",
-  "/login/page": "app/login/page.js",
   "/page": "app/page.js"
 }

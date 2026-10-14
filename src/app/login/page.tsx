@@ -231,21 +231,14 @@ export default function LoginPage() {
                 )}
               </button>
 
-              {/* Quick Fill Testing Helper Buttons */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('admin', 'admin123')}
-                  className="py-2.5 px-3 rounded-xl font-bold text-[11px] uppercase tracking-wider text-amber-300 bg-neutral-900/90 border border-amber-500/40 hover:bg-neutral-800 hover:border-amber-400 active:scale-[0.98] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-md"
-                >
-                  <span>👑 Admin Preset</span>
-                </button>
+              {/* Quick Fill Player Demo Helper Button */}
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => handleQuickDemo('vip_player', 'pass123')}
-                  className="py-2.5 px-3 rounded-xl font-bold text-[11px] uppercase tracking-wider text-amber-300 bg-neutral-900/90 border border-amber-500/40 hover:bg-neutral-800 hover:border-amber-400 active:scale-[0.98] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-md"
+                  className="w-full py-2.5 px-3 rounded-xl font-bold text-[11px] uppercase tracking-wider text-amber-300 bg-neutral-900/90 border border-amber-500/40 hover:bg-neutral-800 hover:border-amber-400 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                 >
-                  <span>🎰 Player Preset</span>
+                  <span>🎰 Player Preset (Demo)</span>
                 </button>
               </div>
 

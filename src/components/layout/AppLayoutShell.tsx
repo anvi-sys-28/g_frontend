@@ -27,14 +27,15 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
 
   const isIntroPage = pathname === '/intro';
   const isLoginPage = pathname === '/login';
+  const isAdminPage = pathname.startsWith('/admin');
   const isUnauthRoot = pathname === '/' && !isAuth;
-  const isFullScreenPage = isIntroPage || isLoginPage || isUnauthRoot;
+  const isFullScreenPage = isIntroPage || isLoginPage || isAdminPage || isUnauthRoot;
 
-  // Protect internal pages like /casino or /admin if unauthenticated
+  // Protect internal pages like /casino if unauthenticated (admin is accessed directly via /admin)
   useEffect(() => {
     try {
       const auth = localStorage.getItem('playin_auth');
-      if (!auth && (pathname.startsWith('/casino') || pathname.startsWith('/admin'))) {
+      if (!auth && pathname.startsWith('/casino')) {
         router.replace('/login');
       }
     } catch {}

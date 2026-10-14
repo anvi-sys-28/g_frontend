@@ -30,8 +30,8 @@ export function AppHeader() {
     };
   }, []);
 
-  // Hide AppHeader entirely on full-screen login and intro pages, or when on root before login
-  if (pathname === '/login' || pathname === '/intro') return null;
+  // Hide AppHeader entirely on full-screen login, intro, admin portal, or when on root before login
+  if (pathname === '/login' || pathname === '/intro' || pathname.startsWith('/admin')) return null;
   if (pathname === '/' && !isAuth) return null;
 
   const handleLogout = () => {
@@ -46,7 +46,6 @@ export function AppHeader() {
   const navLinks = [
     { label: 'Sports', href: '/' },
     { label: 'Casino', href: '/casino' },
-    { label: 'Admin Portal', href: '/admin' },
     { label: 'Series', href: '/series' },
     { label: 'Teams', href: '/teams' },
     { label: 'Fixtures', href: '/fixtures' },
