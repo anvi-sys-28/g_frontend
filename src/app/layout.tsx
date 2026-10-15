@@ -31,6 +31,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -56,7 +57,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-surface text-surface-text font-sans antialiased selection:bg-brand-50 selection:text-brand-700">
+      <body className="min-h-screen bg-surface text-surface-text font-sans antialiased selection:bg-brand-50 selection:text-brand-700">
         <Providers>
           {/* Main Content Area: dynamically handled by AppLayoutShell */}
           <AppLayoutShell>

@@ -248,9 +248,19 @@ export function BottomTabBar() {
       {/* Authentic Limelight Navigation Bar with Cricket, Casino, and Profile */}
       <div
         aria-label="Bottom Navigation"
-        className="fixed bottom-4 left-0 right-0 z-40 flex justify-center items-center pointer-events-none px-4 pb-[env(safe-area-inset-bottom)]"
+        className="flex justify-center items-center px-4 pointer-events-none"
+        style={{
+          position: 'fixed',
+          bottom: 'max(1rem, env(safe-area-inset-bottom, 16px))',
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          transform: 'translate3d(0, 0, 0)',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          pointerEvents: 'none',
+        }}
       >
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto shadow-2xl">
           <LimelightNav
             items={navItems}
             activeIndex={activeIndex}

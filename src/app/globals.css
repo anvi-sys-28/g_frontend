@@ -60,8 +60,8 @@ html.dark,
 
 html {
   scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -73,8 +73,6 @@ body {
   padding: 0;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior-y: none;
-  -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
 

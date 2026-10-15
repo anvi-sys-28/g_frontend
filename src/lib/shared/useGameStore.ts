@@ -67,6 +67,10 @@ const STORAGE_KEY_ACHIEVEMENTS = 'probability_playground_achievements';
 
 function getInitialBalance(): number {
   if (typeof window !== 'undefined') {
+    const userCoins = localStorage.getItem('playin_user_coins');
+    if (userCoins && !isNaN(Number(userCoins))) {
+      return Number(userCoins);
+    }
     const saved = localStorage.getItem(STORAGE_KEY_BALANCE) || localStorage.getItem('roulette_balance');
     if (saved && !isNaN(Number(saved))) {
       return Number(saved);
@@ -114,6 +118,7 @@ export const useGameStore = create<SharedGameState>((set, get) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY_BALANCE, String(newBal));
         localStorage.setItem('roulette_balance', String(newBal));
+        localStorage.setItem('playin_user_coins', String(newBal));
       }
       set({ balance: newBal });
     },
@@ -125,6 +130,7 @@ export const useGameStore = create<SharedGameState>((set, get) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY_BALANCE, String(newBal));
         localStorage.setItem('roulette_balance', String(newBal));
+        localStorage.setItem('playin_user_coins', String(newBal));
       }
       set({ balance: newBal });
       return true;
@@ -134,6 +140,7 @@ export const useGameStore = create<SharedGameState>((set, get) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem(STORAGE_KEY_BALANCE, String(amount));
         localStorage.setItem('roulette_balance', String(amount));
+        localStorage.setItem('playin_user_coins', String(amount));
       }
       set({ balance: amount });
     },

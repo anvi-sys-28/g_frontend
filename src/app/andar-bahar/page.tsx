@@ -13,6 +13,7 @@ import { AndarBaharStatsSheet } from '@/components/andar-bahar/AndarBaharStatsSh
 import { AndarBaharSettingsModal } from '@/components/andar-bahar/AndarBaharSettingsModal';
 import { useAndarBaharStore } from '@/lib/andar-bahar/useAndarBaharStore';
 import { useGameStore } from '@/lib/shared/useGameStore';
+import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import { getExactProbabilities } from '@/lib/andar-bahar/andarBaharEngine';
 import { Calculator, Sparkles, BookOpen, TrendingDown, Layers } from 'lucide-react';
 
@@ -38,6 +39,32 @@ export default function AndarBaharPage() {
   const config = useAndarBaharStore((s) => s.config);
   const toggleStats = useAndarBaharStore((s) => s.toggleStats);
   const recentResults = useAndarBaharStore((s) => s.recentResults);
+
+  // Sync with user's authentic casino coins from database and localStorage
+  React.useEffect(() => {
+    try {
+      const userCoins = localStorage.getItem('playin_user_coins');
+      if (userCoins && !isNaN(Number(userCoins))) {
+        const amt = Number(userCoins);
+        useGameStore.getState().resetBalance(amt);
+        useRouletteStore.getState().resetBalance(amt);
+      }
+
+      const storedId = localStorage.getItem('playin_user_id') || 'vip_player';
+      fetch(`/api/casino/auth?userId=${encodeURIComponent(storedId)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.user?.coins !== undefined && data.user.coins !== null) {
+            useGameStore.getState().resetBalance(data.user.coins);
+            useRouletteStore.getState().resetBalance(data.user.coins);
+            try {
+              localStorage.setItem('playin_user_coins', String(data.user.coins));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    } catch {}
+  }, []);
 
   // Exact mathematical probability
   const exact = getExactProbabilities(config.firstSideRule);

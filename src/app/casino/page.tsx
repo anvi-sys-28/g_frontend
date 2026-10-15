@@ -247,7 +247,7 @@ export default function CasinoPage() {
   ];
 
   return (
-    <div className="relative min-h-screen pb-16">
+    <div className="relative min-h-screen pb-28">
       {/* 100% Fixed, Motionless Background Layer */}
       <div
         aria-hidden="true"

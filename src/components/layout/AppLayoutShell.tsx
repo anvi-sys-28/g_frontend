@@ -46,7 +46,7 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="flex-1 w-full pb-24 lg:pb-8">
+    <main className="w-full min-h-screen pb-28 lg:pb-8">
       {children}
     </main>
   );

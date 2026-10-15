@@ -69,11 +69,16 @@ function persistBalance(bal: number) {
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY_BALANCE, String(bal));
     localStorage.setItem('probability_playground_balance', String(bal));
+    localStorage.setItem('playin_user_coins', String(bal));
   }
 }
 
 function getInitialBalance(): number {
   if (typeof window !== 'undefined') {
+    const userCoins = localStorage.getItem('playin_user_coins');
+    if (userCoins && !isNaN(Number(userCoins))) {
+      return Number(userCoins);
+    }
     const saved =
       localStorage.getItem('probability_playground_balance') ||
       localStorage.getItem(STORAGE_KEY_BALANCE);

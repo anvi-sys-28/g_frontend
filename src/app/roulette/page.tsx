@@ -13,6 +13,7 @@ import { WinningBadge } from '@/components/roulette/WinningBadge';
 import { StatsSheet } from '@/components/roulette/StatsSheet';
 import { SettingsModal } from '@/components/roulette/SettingsModal';
 import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
+import { useGameStore } from '@/lib/shared/useGameStore';
 import {
   calculateTableSummary,
   analyzeStreak,
@@ -46,21 +47,33 @@ export default function RoulettePage() {
   const summary = calculateTableSummary(activeBetsList, wheelType);
   const streak = analyzeStreak(recentNumbers);
 
-  // Sync with user's existing casino coins if available
+  // Sync with user's authentic casino coins from database and localStorage
   useEffect(() => {
     try {
-      const storedId = localStorage.getItem('playin_user_id');
-      if (storedId) {
-        fetch(`/api/casino/auth?userId=${encodeURIComponent(storedId)}`)
-          .then((res) => res.json())
-          .then((data) => {
-            if (data?.user?.coins) {
-              useRouletteStore.getState().addBalance(0); // Ensure initialized
-            }
-          })
-          .catch(() => {});
+      const userCoins = localStorage.getItem('playin_user_coins');
+      if (userCoins && !isNaN(Number(userCoins))) {
+        const amt = Number(userCoins);
+        useRouletteStore.getState().resetBalance(amt);
+        useGameStore.getState().resetBalance(amt);
       }
+
+      const storedId = localStorage.getItem('playin_user_id') || 'vip_player';
+      fetch(`/api/casino/auth?userId=${encodeURIComponent(storedId)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.user?.coins !== undefined && data.user.coins !== null) {
+            useRouletteStore.getState().resetBalance(data.user.coins);
+            useGameStore.getState().resetBalance(data.user.coins);
+            try {
+              localStorage.setItem('playin_user_coins', String(data.user.coins));
+            } catch {}
+          }
+        })
+        .catch(() => {});
     } catch {}
+    if (typeof window !== 'undefined') {
+      (window as any).__useRouletteStore = useRouletteStore;
+    }
   }, []);
 
   // Desktop Probability Playground Side Column

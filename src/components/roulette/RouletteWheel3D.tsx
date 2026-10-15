@@ -313,14 +313,13 @@ export function RouletteWheel3D() {
     let ballTotalTravel = 0;
     let lastBounceTime = 0;
 
-    // Default ball parked in pocket 0
+    // Default ball parked in pocket
     const pocketAngleStep = (Math.PI * 2) / 37;
-    currentBallAngle = targetWinningPocketIndex * pocketAngleStep - Math.PI / 2;
-    ballMesh.position.set(
-      Math.cos(currentBallAngle) * ballRadius,
-      ballHeight,
-      Math.sin(currentBallAngle) * ballRadius
-    );
+    const initialLocalAngle = targetWinningPocketIndex * pocketAngleStep - Math.PI / 2;
+    const initialLocalX = Math.cos(initialLocalAngle) * ballRadius;
+    const initialLocalZ = Math.sin(initialLocalAngle) * ballRadius;
+    currentBallAngle = initialLocalAngle;
+    ballMesh.position.set(initialLocalX, ballHeight, initialLocalZ);
 
     // --- RESIZE LISTENER ---
     const handleResize = () => {
@@ -357,18 +356,24 @@ export function RouletteWheel3D() {
           spinDuration = duration;
           wheelStartAngle = currentWheelAngle;
 
-          // Wheel makes 2.5 full counter-clockwise turns
+          // Wheel makes full counter-clockwise turns
           wheelTotalDelta = -(Math.PI * 2 * (fastSpin ? 1.5 : 2.5));
-
-          // Pocket local angle on wheel
-          const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
-          // Target pocket final world position when spin ends
           const finalWheelAngle = wheelStartAngle + wheelTotalDelta;
-          const targetFinalWorldAngle = finalWheelAngle + targetLocalAngle;
+
+          // Target pocket local angle on wheel rotor
+          const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
+          const targetLocalX = Math.cos(targetLocalAngle) * 2.38;
+          const targetLocalZ = Math.sin(targetLocalAngle) * 2.38;
+
+          // Exact target pocket world position when spin ends (at finalWheelAngle)
+          const targetFinalWorldX = targetLocalX * Math.cos(finalWheelAngle) + targetLocalZ * Math.sin(finalWheelAngle);
+          const targetFinalWorldZ = -targetLocalX * Math.sin(finalWheelAngle) + targetLocalZ * Math.cos(finalWheelAngle);
+          const targetFinalWorldAngle = Math.atan2(targetFinalWorldZ, targetFinalWorldX);
 
           // Ball initial launch angle (opposite direction)
           ballStartAngle = currentBallAngle;
           const fullRevolutions = fastSpin ? 3 : 6;
+
           // Calculate exact travel so ball arrives precisely at targetFinalWorldAngle
           let angleDiff = (targetFinalWorldAngle - ballStartAngle) % (Math.PI * 2);
           if (angleDiff < 0) angleDiff += Math.PI * 2;
@@ -379,21 +384,21 @@ export function RouletteWheel3D() {
         const p = Math.min(elapsed / spinDuration, 1.0);
 
         if (p >= 1.0) {
-          // --- PINPOINT SETTLEMENT IN WINNING POCKET (NO RE-ENTRY JITTER) ---
+          // --- PINPOINT SETTLEMENT IN WINNING POCKET ---
           const finalWheelAngle = wheelStartAngle + wheelTotalDelta;
           currentWheelAngle = finalWheelAngle;
           rotorGroup.rotation.y = currentWheelAngle;
 
           const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
-          currentBallAngle = finalWheelAngle + targetLocalAngle;
+          const targetLocalX = Math.cos(targetLocalAngle) * 2.38;
+          const targetLocalZ = Math.sin(targetLocalAngle) * 2.38;
+          const worldX = targetLocalX * Math.cos(currentWheelAngle) + targetLocalZ * Math.sin(currentWheelAngle);
+          const worldZ = -targetLocalX * Math.sin(currentWheelAngle) + targetLocalZ * Math.cos(currentWheelAngle);
+
           ballRadius = 2.38;
           ballHeight = -0.20;
-
-          ballMesh.position.set(
-            Math.cos(currentBallAngle) * ballRadius,
-            ballHeight,
-            Math.sin(currentBallAngle) * ballRadius
-          );
+          ballMesh.position.set(worldX, ballHeight, worldZ);
+          currentBallAngle = Math.atan2(worldZ, worldX);
 
           camera.position.copy(zoomedCamPos);
           camera.lookAt(0, -0.35, 0);
@@ -409,8 +414,6 @@ export function RouletteWheel3D() {
           rotorGroup.rotation.y = currentWheelAngle;
 
           // Smooth continuous deceleration for ball:
-          // E(p) = 1 - (1 - p)^2.6
-          // Derivative starts high and smoothly decelerates to 0 at p=1
           const ballEase = 1 - Math.pow(1 - p, 2.6);
           currentBallAngle = ballStartAngle + ballTotalTravel * ballEase;
 
@@ -419,12 +422,23 @@ export function RouletteWheel3D() {
             // Phase 1: High outer track orbit
             ballRadius = 3.32;
             ballHeight = 0.04;
+            ballMesh.position.set(
+              Math.cos(currentBallAngle) * ballRadius,
+              ballHeight,
+              Math.sin(currentBallAngle) * ballRadius
+            );
           } else if (p < 0.84) {
             // Phase 2: Smooth spiral drop into pocket ring
             const u = (p - 0.60) / 0.24;
             const smooth = u * u * (3 - 2 * u); // smoothstep
             ballRadius = 3.32 - smooth * (3.32 - 2.38);
             ballHeight = 0.04 - smooth * (0.04 - (-0.20));
+
+            ballMesh.position.set(
+              Math.cos(currentBallAngle) * ballRadius,
+              ballHeight,
+              Math.sin(currentBallAngle) * ballRadius
+            );
 
             if (currentTime - lastBounceTime > 180) {
               soundEffects.playBallBounceSound(0.5 * (1 - u));
@@ -437,18 +451,26 @@ export function RouletteWheel3D() {
             const bounce = Math.abs(Math.sin(v * Math.PI * 3)) * Math.pow(1 - v, 1.8) * 0.07;
             ballHeight = -0.20 + bounce;
 
+            // Interpolate toward the rotating winning pocket's exact 3D coordinates
+            const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
+            const targetLocalX = Math.cos(targetLocalAngle) * 2.38;
+            const targetLocalZ = Math.sin(targetLocalAngle) * 2.38;
+            const targetPocketX = targetLocalX * Math.cos(currentWheelAngle) + targetLocalZ * Math.sin(currentWheelAngle);
+            const targetPocketZ = -targetLocalX * Math.sin(currentWheelAngle) + targetLocalZ * Math.cos(currentWheelAngle);
+
+            const blend = Math.min(v * 1.4, 1.0);
+            const orbitX = Math.cos(currentBallAngle) * 2.38;
+            const orbitZ = Math.sin(currentBallAngle) * 2.38;
+            const posX = orbitX + (targetPocketX - orbitX) * blend;
+            const posZ = orbitZ + (targetPocketZ - orbitZ) * blend;
+
+            ballMesh.position.set(posX, ballHeight, posZ);
+
             if (v > 0.1 && currentTime - lastBounceTime > 120 && bounce > 0.01) {
               soundEffects.playBallBounceSound(bounce * 12);
               lastBounceTime = currentTime;
             }
           }
-
-          // Update 3D ball position
-          ballMesh.position.set(
-            Math.cos(currentBallAngle) * ballRadius,
-            ballHeight,
-            Math.sin(currentBallAngle) * ballRadius
-          );
 
           // Camera push-in effect
           const camProgress = Math.sin(p * Math.PI * 0.5);
@@ -462,17 +484,17 @@ export function RouletteWheel3D() {
         currentWheelAngle -= 0.15 * dt;
         rotorGroup.rotation.y = currentWheelAngle;
 
-        // Ball stays locked in winning pocket
+        // Ball stays locked in the winning pocket with exact 3D coordinates
         const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
-        currentBallAngle = currentWheelAngle + targetLocalAngle;
+        const targetLocalX = Math.cos(targetLocalAngle) * 2.38;
+        const targetLocalZ = Math.sin(targetLocalAngle) * 2.38;
+        const worldX = targetLocalX * Math.cos(currentWheelAngle) + targetLocalZ * Math.sin(currentWheelAngle);
+        const worldZ = -targetLocalX * Math.sin(currentWheelAngle) + targetLocalZ * Math.cos(currentWheelAngle);
+
         ballRadius = 2.38;
         ballHeight = -0.20;
-
-        ballMesh.position.set(
-          Math.cos(currentBallAngle) * ballRadius,
-          ballHeight,
-          Math.sin(currentBallAngle) * ballRadius
-        );
+        ballMesh.position.set(worldX, ballHeight, worldZ);
+        currentBallAngle = Math.atan2(worldZ, worldX);
 
         // Smooth camera ease back to initial vantage point
         camera.position.lerp(initialCamPos, 0.06);
