@@ -48,6 +48,7 @@ export interface SharedGameState {
   level: number;
   achievements: Record<string, string>; // id -> unlocked date
   accountModalOpen: boolean;
+  requestCoinsModalOpen: boolean;
 
   // Actions
   addBalance: (amount: number) => void;
@@ -57,6 +58,7 @@ export interface SharedGameState {
   addXp: (amount: number, reason?: string) => void;
   unlockAchievement: (id: string) => void;
   toggleAccountModal: (open?: boolean) => void;
+  toggleRequestCoinsModal: (open?: boolean) => void;
 }
 
 const STORAGE_KEY_BALANCE = 'probability_playground_balance';
@@ -105,6 +107,7 @@ export const useGameStore = create<SharedGameState>((set, get) => {
     level: Math.floor(initXp / 100) + 1,
     achievements: getInitialAchievements(),
     accountModalOpen: false,
+    requestCoinsModalOpen: false,
 
     addBalance: (amount: number) => {
       const newBal = get().balance + amount;
@@ -161,6 +164,10 @@ export const useGameStore = create<SharedGameState>((set, get) => {
 
     toggleAccountModal: (open?: boolean) => {
       set((s) => ({ accountModalOpen: open !== undefined ? open : !s.accountModalOpen }));
+    },
+
+    toggleRequestCoinsModal: (open?: boolean) => {
+      set((s) => ({ requestCoinsModalOpen: open !== undefined ? open : !s.requestCoinsModalOpen }));
     },
   };
 });

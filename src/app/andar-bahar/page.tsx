@@ -158,7 +158,7 @@ export default function AndarBaharPage() {
       <WinnerBanner />
 
       {/* 3. Hero 3D Dealer Table (~45% of Screen Height) */}
-      <div className="relative w-full h-[42vh] sm:h-[370px] bg-neutral-950 shrink-0 overflow-hidden">
+      <div className="relative w-full h-[42vh] sm:h-[370px] bg-transparent shrink-0 overflow-hidden">
         <DealerTable3D />
       </div>
 

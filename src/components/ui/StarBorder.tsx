@@ -236,14 +236,6 @@ export const StarBorder = <T extends ElementType = 'button'>({
     const ctx = canvas?.getContext('2d');
     if (!root || !canvas || !ctx) return undefined;
 
-    const isMobile =
-      typeof window !== 'undefined' &&
-      (window.innerWidth < 768 || window.matchMedia?.('(pointer: coarse)').matches);
-    if (isMobile) {
-      // On mobile devices, bypass heavy canvas loop to achieve smooth 60fps touch scrolling
-      return undefined;
-    }
-
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const point: PointData = { x: 0, y: 0, nx: 0, ny: -1 };
     const state = {

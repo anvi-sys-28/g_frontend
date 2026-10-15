@@ -12,6 +12,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
+import { useGameStore } from '@/lib/shared/useGameStore';
 
 export function Header() {
   const balance = useRouletteStore((s) => s.balance);
@@ -19,10 +20,10 @@ export function Header() {
   const toggleSound = useRouletteStore((s) => s.toggleSound);
   const toggleStats = useRouletteStore((s) => s.toggleStats);
   const toggleSettings = useRouletteStore((s) => s.toggleSettings);
-  const addBalance = useRouletteStore((s) => s.addBalance);
+  const toggleRequestCoinsModal = useGameStore((s) => s.toggleRequestCoinsModal);
 
   return (
-    <header className="relative z-30 flex items-center justify-between px-3 py-2.5 bg-gradient-to-b from-black/90 via-black/60 to-transparent">
+    <header className="relative z-30 flex items-center justify-between px-3 py-2.5 bg-black/25 backdrop-blur-xs border-b border-[#D4AF37]/20">
       {/* Left: Back Button & Title */}
       <div className="flex items-center gap-2.5">
         <Link
@@ -64,9 +65,9 @@ export function Header() {
 
           <button
             type="button"
-            onClick={() => addBalance(1000)}
-            className="w-6 h-6 rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#f5d27a] text-black flex items-center justify-center hover:brightness-110 active:scale-90 transition-all font-black text-xs shadow-sm"
-            title="Refill 1,000 Coins"
+            onClick={() => toggleRequestCoinsModal(true)}
+            className="w-6 h-6 rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#f5d27a] text-black flex items-center justify-center hover:brightness-110 active:scale-90 transition-all font-black text-xs shadow-sm cursor-pointer"
+            title="Request Coins from Admin"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
           </button>

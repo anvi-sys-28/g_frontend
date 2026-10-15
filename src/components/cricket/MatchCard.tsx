@@ -224,7 +224,7 @@ export function MatchCard({
       sparkle={true}
       hover="lap"
       clickPulse={true}
-      className={`${variant === 'carousel' ? 'w-[290px] shrink-0' : 'w-full'} p-0 rounded-card overflow-hidden bg-neutral-950/90 shadow-card ${className}`}
+      className={`${variant === 'carousel' ? 'w-[290px] shrink-0' : 'w-full'} p-0 rounded-card bg-neutral-950/90 shadow-card ${className}`}
     >
       {cardContent}
     </StarBorder>

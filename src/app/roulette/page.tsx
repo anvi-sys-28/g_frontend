@@ -163,7 +163,7 @@ export default function RoulettePage() {
       <WinningBadge />
 
       {/* Hero 3D Scene (~40% of Screen Height) */}
-      <div className="relative w-full h-[36vh] sm:h-[320px] bg-neutral-950 shrink-0 overflow-hidden">
+      <div className="relative w-full h-[36vh] sm:h-[320px] bg-transparent shrink-0 overflow-hidden">
         <RouletteWheel3D />
 
         {/* Last Results Glass Card on Top Right */}
@@ -176,7 +176,7 @@ export default function RoulettePage() {
       </div>
 
       {/* Controls: Chip Selector, Action Bar & Recent Results */}
-      <div className="shrink-0 space-y-1 pb-24 sm:pb-2 bg-gradient-to-t from-black via-black/95 to-transparent">
+      <div className="shrink-0 space-y-1 pb-24 sm:pb-2 bg-transparent">
         {/* Chip Selector Row */}
         <ChipSelector />
 

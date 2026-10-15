@@ -497,19 +497,7 @@ export function RouletteWheel3D() {
   }, []);
 
   return (
-    <div className="relative w-full h-full overflow-hidden select-none">
-      {/* 1:1 Reference Luxury Dealer Casino Backdrop */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/roulette-dealer.jpg"
-        alt="Live Roulette VIP Table"
-        className="absolute inset-0 w-full h-full object-cover object-top opacity-55 filter contrast-110 brightness-95 pointer-events-none"
-      />
-
-      {/* Atmospheric lighting gradients & bokeh glow */}
-      <div className="absolute inset-0 bg-radial from-transparent via-[#0a0a0a]/40 to-[#0a0a0a] pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none" />
-
+    <div className="relative w-full h-full overflow-hidden select-none bg-transparent">
       {/* Three.js 60FPS Interactive 3D Canvas Container */}
       <div ref={containerRef} className="relative z-10 w-full h-full pointer-events-none" />
     </div>

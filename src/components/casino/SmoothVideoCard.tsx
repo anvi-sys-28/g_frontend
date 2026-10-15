@@ -192,7 +192,7 @@ export function SmoothVideoCard({
       onMouseLeave={() => setIsHovered(false)}
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => setIsHovered(false)}
-      className="w-full rounded-3xl overflow-hidden p-0 shadow-2xl bg-neutral-950"
+      className="w-full rounded-3xl p-0 shadow-2xl bg-neutral-950"
     >
       <div
         onMouseEnter={() => setIsHovered(true)}

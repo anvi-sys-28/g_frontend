@@ -8,11 +8,11 @@ import { useAndarBaharStore } from '@/lib/andar-bahar/useAndarBaharStore';
 
 export function GameHeader() {
   const balance = useGameStore((s) => s.balance);
-  const addBalance = useGameStore((s) => s.addBalance);
+  const toggleRequestCoinsModal = useGameStore((s) => s.toggleRequestCoinsModal);
   const toggleSettings = useAndarBaharStore((s) => s.toggleSettings);
 
   return (
-    <header className="relative z-30 flex items-center justify-between px-3 py-2.5 bg-gradient-to-b from-black/95 via-black/75 to-transparent select-none">
+    <header className="relative z-30 flex items-center justify-between px-3 py-2.5 bg-black/25 backdrop-blur-xs border-b border-[#d4af37]/20 select-none">
       {/* Left: Back Button & Title */}
       <div className="flex items-center gap-2.5">
         <Link
@@ -56,9 +56,9 @@ export function GameHeader() {
 
           <button
             type="button"
-            onClick={() => addBalance(1000)}
-            className="w-6 h-6 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f5d27a] text-black flex items-center justify-center hover:brightness-110 active:scale-90 transition-all font-black text-xs shadow-sm"
-            title="Refill 1,000 Coins"
+            onClick={() => toggleRequestCoinsModal(true)}
+            className="w-6 h-6 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#f5d27a] text-black flex items-center justify-center hover:brightness-110 active:scale-90 transition-all font-black text-xs shadow-sm cursor-pointer"
+            title="Request Coins from Admin"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
           </button>

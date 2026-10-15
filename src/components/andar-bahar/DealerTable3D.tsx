@@ -350,18 +350,6 @@ export function DealerTable3D() {
     const backdropGroup = new THREE.Group();
     scene.add(backdropGroup);
 
-    // Red velvet drape curve behind the table
-    const drapeGeo = new THREE.CylinderGeometry(8, 8, 6, 32, 1, true, -Math.PI * 0.8, Math.PI * 0.6);
-    const drapeMat = new THREE.MeshStandardMaterial({
-      color: 0x240206,
-      roughness: 0.8,
-      metalness: 0.1,
-      side: THREE.BackSide,
-    });
-    const drapeMesh = new THREE.Mesh(drapeGeo, drapeMat);
-    drapeMesh.position.set(0, 1.5, -3.5);
-    backdropGroup.add(drapeMesh);
-
     // Glowing chandelier emissive spheres
     const chandelierMat = new THREE.MeshBasicMaterial({ color: 0xffe89e });
     for (let i = 0; i < 5; i++) {
