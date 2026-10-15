@@ -28,7 +28,7 @@ function ChipMarker({ bet }: { bet: PlacedBet }) {
   const count = Object.values(bet.chips).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none animate-in zoom-in-75 duration-200">
+    <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none transform-gpu animate-in zoom-in-75 duration-150">
       <div
         className={`relative w-6 h-6 rounded-full flex items-center justify-center border-2 shadow-lg shadow-black/80 font-black text-[9px] text-white ${visual.bg} ${visual.border} ring-2 ${visual.ring}`}
       >

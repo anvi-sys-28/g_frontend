@@ -23,6 +23,17 @@
   --danger:    #9F1239;
   --live:      #D7263D;
   --draw-nr:   #9CA3AF;
+
+  /* shadcn UI compatibility for LimelightNav */
+  --primary:   #D7263D;
+  --primary-foreground: #FFFFFF;
+  --card:      #FFFFFF;
+  --card-foreground: #111318;
+  --foreground:#111318;
+  --secondary: #F6F6F7;
+  --secondary-foreground: #111318;
+  --accent:    #E6E7EA;
+  --accent-foreground: #111318;
 }
 
 /* Black + Red Theme */
@@ -34,6 +45,17 @@ html.dark,
   --text:      #F3F4F6;
   --text-muted:#9CA3AF;
   --brand-50:  #2C1217;
+
+  /* shadcn UI compatibility for LimelightNav dark mode */
+  --primary:   #D7263D;
+  --primary-foreground: #FFFFFF;
+  --card:      #141519;
+  --card-foreground: #F3F4F6;
+  --foreground:#F3F4F6;
+  --secondary: #1F2026;
+  --secondary-foreground: #F3F4F6;
+  --accent:    #26282E;
+  --accent-foreground: #F3F4F6;
 }
 
 body {

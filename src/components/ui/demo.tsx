@@ -1,6 +1,7 @@
 'use client';
 
-import { LimelightNav, NavItem } from '@/components/ui/limelight-nav';
+import React from 'react';
+import { LimelightNav, NavItem } from "@/components/ui/limelight-nav";
 import { Home, Bookmark, PlusCircle, User, Settings } from 'lucide-react';
 
 const customNavItems: NavItem[] = [
@@ -15,9 +16,13 @@ const Customized = () => {
   return <LimelightNav className="bg-secondary dark:bg-card/50 dark:border-accent/50 rounded-xl" items={customNavItems} />;
 };
 
+export { Customized };
+
 const Default = () => {
   return <LimelightNav />;
 };
+
+export { Default };
 
 export default function DemoPage() {
   return (
@@ -27,5 +32,3 @@ export default function DemoPage() {
     </div>
   );
 }
-
-export { Customized, Default };

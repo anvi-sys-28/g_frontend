@@ -366,6 +366,8 @@ export default function CasinoPage() {
               onPlayClick={() => {
                 if (game.id === 'roulette') {
                   router.push('/roulette');
+                } else if (game.id === 'andhar-bahar') {
+                  router.push('/andar-bahar');
                 } else {
                   setActiveGame(game.id as any);
                 }

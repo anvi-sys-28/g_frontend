@@ -30,6 +30,24 @@ const config: Config = {
         danger: 'var(--danger)',
         live: 'var(--live)',
         'draw-nr': 'var(--draw-nr)',
+        // shadcn UI colors
+        primary: {
+          DEFAULT: 'var(--primary, #D7263D)',
+          foreground: 'var(--primary-foreground, #FFFFFF)',
+        },
+        card: {
+          DEFAULT: 'var(--card, #141519)',
+          foreground: 'var(--card-foreground, #F3F4F6)',
+        },
+        secondary: {
+          DEFAULT: 'var(--secondary, #1F2026)',
+          foreground: 'var(--secondary-foreground, #F3F4F6)',
+        },
+        foreground: 'var(--foreground, #F3F4F6)',
+        accent: {
+          DEFAULT: 'var(--accent, #26282E)',
+          foreground: 'var(--accent-foreground, #F3F4F6)',
+        },
       },
       borderRadius: {
         card: '12px',

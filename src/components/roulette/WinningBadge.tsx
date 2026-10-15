@@ -18,10 +18,11 @@ export function WinningBadge() {
       if (spinResult.totalPayout > 0) {
         try {
           confetti({
-            particleCount: 60,
-            spread: 70,
-            origin: { y: 0.6 },
+            particleCount: 35,
+            spread: 60,
+            origin: { y: 0.55 },
             colors: ['#D4AF37', '#FFDF73', '#FF4D4D', '#FFFFFF'],
+            disableForReducedMotion: true,
           });
         } catch {}
       }

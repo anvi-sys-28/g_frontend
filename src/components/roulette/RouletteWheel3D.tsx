@@ -7,10 +7,10 @@ import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import { soundEffects } from '@/lib/roulette/soundEffects';
 
 /**
- * Creates a high-resolution circular texture for the 37 European pockets
+ * Creates an optimized 1024x1024 circular texture for the 37 European pockets
  */
 function createWheelTexture(): THREE.CanvasTexture {
-  const size = 2048;
+  const size = 1024;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -18,20 +18,20 @@ function createWheelTexture(): THREE.CanvasTexture {
 
   const cx = size / 2;
   const cy = size / 2;
-  const rOuter = size * 0.48;
-  const rInner = size * 0.35;
+  const rOuter = size * 0.485;
+  const rInner = size * 0.355;
   const totalPockets = 37;
   const anglePerPocket = (Math.PI * 2) / totalPockets;
 
   // Background
-  ctx.fillStyle = '#110d0a';
+  ctx.fillStyle = '#0f0b08';
   ctx.fillRect(0, 0, size, size);
 
   // Outer gold rim
   ctx.beginPath();
-  ctx.arc(cx, cy, rOuter + 8, 0, Math.PI * 2);
+  ctx.arc(cx, cy, rOuter + 4, 0, Math.PI * 2);
   ctx.strokeStyle = '#D4AF37';
-  ctx.lineWidth = 14;
+  ctx.lineWidth = 8;
   ctx.stroke();
 
   // Draw 37 pockets
@@ -39,12 +39,12 @@ function createWheelTexture(): THREE.CanvasTexture {
     const startAngle = index * anglePerPocket - anglePerPocket / 2 - Math.PI / 2;
     const endAngle = startAngle + anglePerPocket;
 
-    // Determine pocket color
+    // Pocket color
     let pocketColor = '#0b6623'; // Green for 0
     if (RED_NUMBERS.has(num)) pocketColor = '#b81414';
-    if (BLACK_NUMBERS.has(num)) pocketColor = '#1a1a1a';
+    if (BLACK_NUMBERS.has(num)) pocketColor = '#181818';
 
-    // Pocket background
+    // Sector path
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(startAngle) * rInner, cy + Math.sin(startAngle) * rInner);
     ctx.arc(cx, cy, rOuter, startAngle, endAngle);
@@ -57,9 +57,9 @@ function createWheelTexture(): THREE.CanvasTexture {
     // Pocket fret divider (gold line)
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(startAngle) * rInner, cy + Math.sin(startAngle) * rInner);
-    ctx.lineTo(cx + Math.cos(startAngle) * (rOuter + 6), cy + Math.sin(startAngle) * (rOuter + 6));
+    ctx.lineTo(cx + Math.cos(startAngle) * (rOuter + 3), cy + Math.sin(startAngle) * (rOuter + 3));
     ctx.strokeStyle = '#f5d27a';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
 
     // Number text
@@ -70,27 +70,29 @@ function createWheelTexture(): THREE.CanvasTexture {
     const ty = cy + Math.sin(midAngle) * textRadius;
 
     ctx.translate(tx, ty);
-    ctx.rotate(midAngle + Math.PI / 2); // Rotate text radially facing outward
+    ctx.rotate(midAngle + Math.PI / 2); // Facing radially outward
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 44px sans-serif';
+    ctx.font = 'bold 26px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 6;
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 4;
     ctx.fillText(num.toString(), 0, 0);
     ctx.restore();
   });
 
   // Inner gold border
   ctx.beginPath();
-  ctx.arc(cx, cy, rInner - 2, 0, Math.PI * 2);
+  ctx.arc(cx, cy, rInner - 1, 0, Math.PI * 2);
   ctx.strokeStyle = '#D4AF37';
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 6;
   ctx.stroke();
 
   const texture = new THREE.CanvasTexture(canvas);
-  texture.anisotropy = 16;
+  texture.anisotropy = 8;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
   return texture;
 }
 
@@ -101,7 +103,6 @@ export function RouletteWheel3D() {
   const fastSpin = useRouletteStore((s) => s.fastSpin);
   const onSpinComplete = useRouletteStore((s) => s.onSpinComplete);
 
-  // References for animation loop
   const stateRef = useRef({
     spinState,
     targetPocketIndex: targetWinningPocketIndex,
@@ -124,95 +125,91 @@ export function RouletteWheel3D() {
 
     // --- THREE.JS SCENE SETUP ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0a0a0a, 0.035);
 
     const camera = new THREE.PerspectiveCamera(
       42,
       container.clientWidth / container.clientHeight,
       0.1,
-      100
+      50
     );
-    // Camera positioned at realistic angled live casino dealer view
-    const initialCamPos = new THREE.Vector3(0, 5.8, 6.2);
-    const zoomedCamPos = new THREE.Vector3(0, 4.3, 4.6);
+    const initialCamPos = new THREE.Vector3(0, 5.7, 6.1);
+    const zoomedCamPos = new THREE.Vector3(0, 4.4, 4.7);
     camera.position.copy(initialCamPos);
-    camera.lookAt(0, -0.4, 0);
+    camera.lookAt(0, -0.35, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    // High performance renderer with optimal pixel ratio (capped at 1.5)
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+      precision: 'highp',
+    });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
 
     // --- LIGHTING ---
-    const ambientLight = new THREE.AmbientLight(0xfff1db, 0.9);
+    const ambientLight = new THREE.AmbientLight(0xfff3e0, 1.3);
     scene.add(ambientLight);
 
     // Warm overhead spotlight on spindle
-    const spotLight = new THREE.SpotLight(0xffdf9e, 4.0, 20, Math.PI / 4, 0.4, 1.2);
-    spotLight.position.set(0, 8, 3);
-    spotLight.castShadow = true;
-    spotLight.shadow.mapSize.width = 1024;
-    spotLight.shadow.mapSize.height = 1024;
-    spotLight.shadow.bias = -0.0005;
+    const spotLight = new THREE.DirectionalLight(0xffe2a0, 2.5);
+    spotLight.position.set(0, 9, 4);
     scene.add(spotLight);
 
     // Gold rim accent light
-    const rimLight = new THREE.DirectionalLight(0xe8b86d, 1.5);
-    rimLight.position.set(-4, 3, -3);
+    const rimLight = new THREE.DirectionalLight(0xd4af37, 1.8);
+    rimLight.position.set(-4, 3, -2);
     scene.add(rimLight);
 
     // --- ROULETTE WHEEL HIERARCHY ---
     const wheelGroup = new THREE.Group();
     scene.add(wheelGroup);
 
-    // 1. Static Outer Bowl & Rim (Mahogany & Gold)
-    const bowlGroup = new THREE.Group();
-    scene.add(bowlGroup);
-
-    // Polished Mahogany Outer Ring
+    // Materials
     const mahoganyMat = new THREE.MeshStandardMaterial({
       color: 0x3d170a,
-      roughness: 0.25,
-      metalness: 0.1,
+      roughness: 0.28,
+      metalness: 0.08,
     });
     const goldMat = new THREE.MeshStandardMaterial({
-      color: 0xe5b842,
-      roughness: 0.18,
+      color: 0xdeb038,
+      roughness: 0.16,
       metalness: 0.88,
     });
     const darkWoodMat = new THREE.MeshStandardMaterial({
       color: 0x1f0c05,
-      roughness: 0.4,
+      roughness: 0.35,
       metalness: 0.05,
     });
 
-    // Outer wood bevel
-    const outerRimGeo = new THREE.TorusGeometry(3.6, 0.32, 24, 72);
+    // 1. Static Outer Bowl & Rim (Mahogany & Gold)
+    const bowlGroup = new THREE.Group();
+    wheelGroup.add(bowlGroup);
+
+    // Outer wood rim bevel
+    const outerRimGeo = new THREE.TorusGeometry(3.6, 0.3, 16, 48);
     const outerRimMesh = new THREE.Mesh(outerRimGeo, mahoganyMat);
     outerRimMesh.rotation.x = Math.PI / 2;
     outerRimMesh.position.y = -0.05;
-    outerRimMesh.castShadow = true;
-    outerRimMesh.receiveShadow = true;
     bowlGroup.add(outerRimMesh);
 
     // Outer gold trim line
-    const goldTrimGeo = new THREE.TorusGeometry(3.85, 0.05, 16, 72);
+    const goldTrimGeo = new THREE.TorusGeometry(3.85, 0.04, 12, 48);
     const goldTrimMesh = new THREE.Mesh(goldTrimGeo, goldMat);
     goldTrimMesh.rotation.x = Math.PI / 2;
     bowlGroup.add(goldTrimMesh);
 
     // Inner gold ball track bevel
-    const trackGoldGeo = new THREE.CylinderGeometry(3.4, 3.2, 0.35, 72, 1, true);
+    const trackGoldGeo = new THREE.CylinderGeometry(3.4, 3.2, 0.32, 48, 1, true);
     const trackGoldMesh = new THREE.Mesh(trackGoldGeo, goldMat);
     trackGoldMesh.position.y = -0.15;
     bowlGroup.add(trackGoldMesh);
 
-    // Diamond deflectors (rhombus brass pins)
-    const deflectorGeo = new THREE.OctahedronGeometry(0.09, 0);
+    // 8 Diamond deflectors (rhombus brass pins)
+    const deflectorGeo = new THREE.OctahedronGeometry(0.08, 0);
     for (let i = 0; i < 8; i++) {
       const angle = (i * Math.PI * 2) / 8;
       const deflector = new THREE.Mesh(deflectorGeo, goldMat);
@@ -221,27 +218,39 @@ export function RouletteWheel3D() {
       bowlGroup.add(deflector);
     }
 
+    // Soft contact shadow disc under the wheel
+    const shadowGeo = new THREE.RingGeometry(1.5, 3.9, 32);
+    const shadowMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide,
+    });
+    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowMesh.rotation.x = -Math.PI / 2;
+    shadowMesh.position.y = -0.38;
+    wheelGroup.add(shadowMesh);
+
     // 2. Rotating Wheel Head (Wheel Rotor)
     const rotorGroup = new THREE.Group();
     wheelGroup.add(rotorGroup);
 
     // Number Pocket Ring with dynamic canvas texture
     const wheelTexture = createWheelTexture();
-    const pocketRingGeo = new THREE.RingGeometry(1.6, 3.18, 72, 1);
+    const pocketRingGeo = new THREE.RingGeometry(1.6, 3.18, 48, 1);
     const pocketRingMat = new THREE.MeshStandardMaterial({
       map: wheelTexture,
       roughness: 0.35,
-      metalness: 0.2,
+      metalness: 0.15,
       side: THREE.DoubleSide,
     });
     const pocketRingMesh = new THREE.Mesh(pocketRingGeo, pocketRingMat);
     pocketRingMesh.rotation.x = -Math.PI / 2;
     pocketRingMesh.position.y = -0.22;
-    pocketRingMesh.receiveShadow = true;
     rotorGroup.add(pocketRingMesh);
 
     // Center Spoke Cone (sloping mahogany)
-    const centerConeGeo = new THREE.ConeGeometry(1.6, 0.45, 48, 1, true);
+    const centerConeGeo = new THREE.ConeGeometry(1.6, 0.45, 36, 1, true);
     const centerConeMesh = new THREE.Mesh(centerConeGeo, darkWoodMat);
     centerConeMesh.position.y = -0.05;
     rotorGroup.add(centerConeMesh);
@@ -257,50 +266,61 @@ export function RouletteWheel3D() {
       rotorGroup.add(spoke);
     }
 
-    // 3. Central Solid Gold Spindle / Turret (Towering Finial)
-    const spindleBaseGeo = new THREE.CylinderGeometry(0.38, 0.45, 0.3, 32);
+    // 3. Central Solid Gold Spindle / Turret (Tiered Crown Finial)
+    const spindleBaseGeo = new THREE.CylinderGeometry(0.38, 0.45, 0.28, 24);
     const spindleBase = new THREE.Mesh(spindleBaseGeo, goldMat);
     spindleBase.position.y = 0.22;
     rotorGroup.add(spindleBase);
 
-    const spindleColGeo = new THREE.CylinderGeometry(0.18, 0.28, 0.55, 32);
+    const spindleColGeo = new THREE.CylinderGeometry(0.18, 0.28, 0.52, 24);
     const spindleCol = new THREE.Mesh(spindleColGeo, goldMat);
     spindleCol.position.y = 0.55;
     rotorGroup.add(spindleCol);
 
-    const spindleCrownGeo = new THREE.SphereGeometry(0.24, 24, 24);
+    const spindleCrownGeo = new THREE.SphereGeometry(0.24, 18, 18);
     const spindleCrown = new THREE.Mesh(spindleCrownGeo, goldMat);
     spindleCrown.position.y = 0.9;
     rotorGroup.add(spindleCrown);
 
-    const spindleTipGeo = new THREE.ConeGeometry(0.12, 0.35, 24);
+    const spindleTipGeo = new THREE.ConeGeometry(0.12, 0.35, 18);
     const spindleTip = new THREE.Mesh(spindleTipGeo, goldMat);
     spindleTip.position.y = 1.15;
     rotorGroup.add(spindleTip);
 
     // 4. The Ivory Ball
-    const ballGeo = new THREE.SphereGeometry(0.075, 24, 24);
+    const ballGeo = new THREE.SphereGeometry(0.075, 16, 16);
     const ballMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.1,
+      roughness: 0.12,
       metalness: 0.05,
     });
     const ballMesh = new THREE.Mesh(ballGeo, ballMat);
-    ballMesh.castShadow = true;
     scene.add(ballMesh);
 
-    // Animation Physics Variables
-    let wheelRotorAngle = 0;
-    let ballAngle = 0;
-    let ballRadius = 3.28;
-    let ballHeight = 0.04;
-    let spinProgress = 0;
-    let spinActive = false;
+    // --- CONTINUOUS PHYSICS & TRAJECTORY VARIABLES ---
+    let currentWheelAngle = 0;
+    let currentBallAngle = 0;
+    let ballRadius = 2.38;
+    let ballHeight = -0.2;
+
+    // Spin trajectory variables
+    let isSpinningActive = false;
     let spinStartTimestamp = 0;
+    let spinDuration = 3.8;
+    let wheelStartAngle = 0;
+    let wheelTotalDelta = 0;
+    let ballStartAngle = 0;
+    let ballTotalTravel = 0;
     let lastBounceTime = 0;
 
     // Default ball parked in pocket 0
-    ballMesh.position.set(Math.cos(0) * 2.35, -0.2, Math.sin(0) * 2.35);
+    const pocketAngleStep = (Math.PI * 2) / 37;
+    currentBallAngle = targetWinningPocketIndex * pocketAngleStep - Math.PI / 2;
+    ballMesh.position.set(
+      Math.cos(currentBallAngle) * ballRadius,
+      ballHeight,
+      Math.sin(currentBallAngle) * ballRadius
+    );
 
     // --- RESIZE LISTENER ---
     const handleResize = () => {
@@ -313,116 +333,126 @@ export function RouletteWheel3D() {
     };
     window.addEventListener('resize', handleResize);
 
-    // --- ANIMATION RAF LOOP ---
+    // --- ANIMATION RAF LOOP (60-120 FPS) ---
     let animationFrameId: number;
-    let lastFrameTime = performance.now();
+    let lastTime = performance.now();
 
     const animate = (currentTime: number) => {
       animationFrameId = requestAnimationFrame(animate);
 
-      const dt = Math.min((currentTime - lastFrameTime) / 1000, 0.1);
-      lastFrameTime = currentTime;
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+      lastTime = currentTime;
 
-      const currentSpinState = stateRef.current.spinState;
-      const targetPocket = stateRef.current.targetPocketIndex;
-      const isFast = stateRef.current.fastSpin;
-      const spinDuration = isFast ? 2.8 : 6.0;
+      const { spinState, targetPocketIndex, fastSpin, onSpinComplete } = stateRef.current;
+      const duration = fastSpin ? 1.8 : 3.8;
 
-      if (currentSpinState === 'spinning') {
-        if (!spinActive) {
-          // Initialize new spin
-          spinActive = true;
+      if (spinState === 'spinning') {
+        if (!isSpinningActive) {
+          // --- LAUNCH NEW SPIN: SETUP DETERMINISTIC TRAJECTORY ---
+          isSpinningActive = true;
           spinStartTimestamp = currentTime;
-          spinProgress = 0;
-          ballRadius = 3.32;
+          spinDuration = duration;
+          wheelStartAngle = currentWheelAngle;
+
+          // Wheel makes 2.5 full counter-clockwise turns
+          wheelTotalDelta = -(Math.PI * 2 * (fastSpin ? 1.5 : 2.5));
+
+          // Pocket local angle on wheel
+          const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
+          // Target pocket final world position when spin ends
+          const finalWheelAngle = wheelStartAngle + wheelTotalDelta;
+          const targetFinalWorldAngle = finalWheelAngle + targetLocalAngle;
+
+          // Ball initial launch angle (opposite direction)
+          ballStartAngle = currentBallAngle;
+          const fullRevolutions = fastSpin ? 3 : 6;
+          // Calculate exact travel so ball arrives precisely at targetFinalWorldAngle
+          let angleDiff = (targetFinalWorldAngle - ballStartAngle) % (Math.PI * 2);
+          if (angleDiff < 0) angleDiff += Math.PI * 2;
+          ballTotalTravel = Math.PI * 2 * fullRevolutions + angleDiff;
         }
 
         const elapsed = (currentTime - spinStartTimestamp) / 1000;
-        spinProgress = Math.min(elapsed / spinDuration, 1.0);
+        const p = Math.min(elapsed / spinDuration, 1.0);
 
-        // Smooth easing curves
-        // Wheel accelerates and then gradually eases into slow rotation
-        const wheelSpeed = (1 - spinProgress * 0.75) * 4.2;
-        wheelRotorAngle -= wheelSpeed * dt;
-        rotorGroup.rotation.y = wheelRotorAngle;
+        // Smooth cubic ease-out for wheel
+        const wheelEase = 1 - Math.pow(1 - p, 3);
+        currentWheelAngle = wheelStartAngle + wheelTotalDelta * wheelEase;
+        rotorGroup.rotation.y = currentWheelAngle;
 
-        // Ball orbits opposite direction (clockwise)
-        // High initial orbit speed, decaying exponentially
-        const ballSpeed = Math.pow(1 - spinProgress * 0.92, 1.8) * 16.0 + 1.2;
-        ballAngle += ballSpeed * dt;
+        // Smooth continuous deceleration for ball:
+        // E(p) = 1 - (1 - p)^2.6
+        // Derivative starts high and smoothly decelerates to 0 at p=1
+        const ballEase = 1 - Math.pow(1 - p, 2.6);
+        currentBallAngle = ballStartAngle + ballTotalTravel * ballEase;
 
-        // Ball drops from outer track to pocket ring as it slows down
-        if (spinProgress < 0.6) {
-          // High rim orbit
+        // Ball Radius and Height Phases:
+        if (p < 0.60) {
+          // Phase 1: High outer track orbit
           ballRadius = 3.32;
           ballHeight = 0.04;
-        } else if (spinProgress < 0.88) {
-          // Spiraling down into pockets
-          const spiralT = (spinProgress - 0.6) / 0.28;
-          ballRadius = 3.32 - spiralT * (3.32 - 2.35);
-          ballHeight = 0.04 - spiralT * 0.23;
+        } else if (p < 0.84) {
+          // Phase 2: Smooth spiral drop into pocket ring
+          const u = (p - 0.60) / 0.24;
+          const smooth = u * u * (3 - 2 * u); // smoothstep
+          ballRadius = 3.32 - smooth * (3.32 - 2.38);
+          ballHeight = 0.04 - smooth * (0.04 - (-0.20));
 
-          // Subtle clatter when ball hits deflectors
-          if (currentTime - lastBounceTime > 220) {
-            soundEffects.playBallBounceSound(0.6 * (1 - spiralT));
+          if (currentTime - lastBounceTime > 180) {
+            soundEffects.playBallBounceSound(0.5 * (1 - u));
             lastBounceTime = currentTime;
           }
         } else {
-          // Settling phase: lock ball to target pocket on rotating wheel
-          const settleT = (spinProgress - 0.88) / 0.12;
-          const pocketAngleStep = (Math.PI * 2) / 37;
-          // Target pocket's exact current world angle on the rotating wheel
-          const targetWorldAngle = wheelRotorAngle + targetPocket * pocketAngleStep - Math.PI / 2;
+          // Phase 3: Settling micro-bounces inside the winning pocket bed
+          ballRadius = 2.38;
+          const v = (p - 0.84) / 0.16;
+          const bounce = Math.abs(Math.sin(v * Math.PI * 3)) * Math.pow(1 - v, 1.8) * 0.07;
+          ballHeight = -0.20 + bounce;
 
-          // Interpolate ball angle to match target pocket
-          ballAngle = THREE.MathUtils.lerp(ballAngle, targetWorldAngle, settleT * 0.35);
-          ballRadius = 2.35;
-
-          // Micro bounces
-          const bounceCount = 4;
-          const bounceIntensity = (1 - settleT) * 0.09;
-          const bounce = Math.abs(Math.sin(settleT * Math.PI * bounceCount)) * bounceIntensity;
-          ballHeight = -0.2 + bounce;
-
-          if (settleT > 0.3 && currentTime - lastBounceTime > 140 && bounceIntensity > 0.015) {
-            soundEffects.playBallBounceSound(bounceIntensity * 10);
+          if (v > 0.1 && currentTime - lastBounceTime > 120 && bounce > 0.01) {
+            soundEffects.playBallBounceSound(bounce * 12);
             lastBounceTime = currentTime;
           }
         }
 
+        // Update 3D ball position
         ballMesh.position.set(
-          Math.cos(ballAngle) * ballRadius,
+          Math.cos(currentBallAngle) * ballRadius,
           ballHeight,
-          Math.sin(ballAngle) * ballRadius
+          Math.sin(currentBallAngle) * ballRadius
         );
 
-        // Camera push-in during spin
-        camera.position.lerpVectors(initialCamPos, zoomedCamPos, Math.sin(spinProgress * Math.PI * 0.5));
-        camera.lookAt(0, -0.3, 0);
+        // Camera push-in effect
+        const camProgress = Math.sin(p * Math.PI * 0.5);
+        camera.position.lerpVectors(initialCamPos, zoomedCamPos, camProgress);
+        camera.lookAt(0, -0.35, 0);
 
         // Spin complete
-        if (spinProgress >= 1.0) {
-          spinActive = false;
-          // Ball stays exactly locked in target pocket
-          stateRef.current.onSpinComplete();
+        if (p >= 1.0) {
+          isSpinningActive = false;
+          onSpinComplete();
         }
       } else {
-        // Idle state: slow, continuous, elegant wheel spin
-        wheelRotorAngle -= 0.18 * dt;
-        rotorGroup.rotation.y = wheelRotorAngle;
+        // --- IDLE STATE: GENTLE, CONTINUOUS WHEEL DRIFT (NO JITTER) ---
+        isSpinningActive = false;
+        currentWheelAngle -= 0.15 * dt;
+        rotorGroup.rotation.y = currentWheelAngle;
 
-        // Ball rests locked in current target pocket
-        const pocketAngleStep = (Math.PI * 2) / 37;
-        const targetWorldAngle = wheelRotorAngle + targetPocket * pocketAngleStep - Math.PI / 2;
+        // Ball stays locked in winning pocket
+        const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
+        currentBallAngle = currentWheelAngle + targetLocalAngle;
+        ballRadius = 2.38;
+        ballHeight = -0.20;
+
         ballMesh.position.set(
-          Math.cos(targetWorldAngle) * 2.35,
-          -0.2,
-          Math.sin(targetWorldAngle) * 2.35
+          Math.cos(currentBallAngle) * ballRadius,
+          ballHeight,
+          Math.sin(currentBallAngle) * ballRadius
         );
 
-        // Camera smoothly returns to initial vantage point
-        camera.position.lerp(initialCamPos, 0.05);
-        camera.lookAt(0, -0.4, 0);
+        // Smooth camera ease back to initial vantage point
+        camera.position.lerp(initialCamPos, 0.06);
+        camera.lookAt(0, -0.35, 0);
       }
 
       renderer.render(scene, camera);
@@ -449,7 +479,7 @@ export function RouletteWheel3D() {
       <img
         src="/roulette-dealer.jpg"
         alt="Live Roulette VIP Table"
-        className="absolute inset-0 w-full h-full object-cover object-top opacity-55 filter contrast-110 brightness-95"
+        className="absolute inset-0 w-full h-full object-cover object-top opacity-55 filter contrast-110 brightness-95 pointer-events-none"
       />
 
       {/* Atmospheric lighting gradients & bokeh glow */}

@@ -1,23 +1,25 @@
 'use client';
 
-import React, { useState, useRef, useLayoutEffect, cloneElement } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, cloneElement } from 'react';
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 // --- Internal Types and Defaults ---
 
-export const DefaultHomeIcon = (props: React.SVGProps<SVGSVGElement>) => (
+const DefaultHomeIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
   </svg>
 );
 
-export const DefaultCompassIcon = (props: React.SVGProps<SVGSVGElement>) => (
+const DefaultCompassIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
     <path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" />
   </svg>
 );
 
-export const DefaultBellIcon = (props: React.SVGProps<SVGSVGElement>) => (
+const DefaultBellIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
     <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
@@ -26,7 +28,7 @@ export const DefaultBellIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export type NavItem = {
   id: string | number;
-  icon: React.ReactElement<{ className?: string }>;
+  icon: React.ReactElement<any>;
   label?: string;
   onClick?: () => void;
 };
@@ -68,24 +70,25 @@ export const LimelightNav = ({
   const navItemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const limelightRef = useRef<HTMLDivElement | null>(null);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (items.length === 0) return;
 
     const limelight = limelightRef.current;
     const activeItem = navItemRefs.current[activeIndex];
-
+    
     if (limelight && activeItem) {
       const newLeft = activeItem.offsetLeft + activeItem.offsetWidth / 2 - limelight.offsetWidth / 2;
       limelight.style.left = `${newLeft}px`;
 
       if (!isReady) {
-        setTimeout(() => setIsReady(true), 50);
+        const timer = setTimeout(() => setIsReady(true), 50);
+        return () => clearTimeout(timer);
       }
     }
   }, [activeIndex, isReady, items]);
 
   if (items.length === 0) {
-    return null;
+    return null; 
   }
 
   const handleItemClick = (index: number, itemOnClick?: () => void) => {
@@ -106,15 +109,15 @@ export const LimelightNav = ({
           onClick={() => handleItemClick(index, onClick)}
           aria-label={label}
         >
-          {cloneElement(icon as React.ReactElement<{ className?: string }>, {
-            className: `w-6 h-6 transition-all duration-200 ease-in-out ${
-              activeIndex === index ? 'opacity-100 scale-110' : 'opacity-40 hover:opacity-75'
-            } ${icon.props?.className || ''} ${iconClassName}`,
+          {cloneElement(icon, {
+            className: `w-6 h-6 transition-opacity duration-100 ease-in-out ${
+              activeIndex === index ? 'opacity-100' : 'opacity-40'
+            } ${icon.props?.className || ''} ${iconClassName || ''}`,
           })}
         </a>
       ))}
 
-      <div
+      <div 
         ref={limelightRef}
         className={`absolute top-0 z-10 w-11 h-[5px] rounded-full bg-primary shadow-[0_50px_15px_var(--primary)] ${
           isReady ? 'transition-[left] duration-400 ease-in-out' : ''

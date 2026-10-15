@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LimelightNav, NavItem } from '@/components/ui/limelight-nav';
 import { CricketBatBallIcon, AceCardIcon, ProfilePersonIcon } from '../icons/NavIcons';
 import {
   X,
@@ -52,6 +53,7 @@ interface RequestItem {
 
 export function BottomTabBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isAuth, setIsAuth] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
@@ -199,8 +201,8 @@ export function BottomTabBar() {
   if (pathname === '/login' || pathname === '/intro' || pathname.startsWith('/admin')) return null;
   if (pathname === '/' && !isAuth) return null;
 
-  // Active Index: 0 = Sports/Cricket, 1 = Casino, 2 = Profile
-  const activeIndex = showProfileModal ? 2 : pathname.startsWith('/casino') ? 1 : 0;
+  // Active Index: 0 = Sports/Cricket, 1 = Casino (or Roulette), 2 = Profile
+  const activeIndex = showProfileModal ? 2 : (pathname.startsWith('/casino') || pathname.startsWith('/roulette')) ? 1 : 0;
 
   // Compute "how many times coins in his account has added"
   const coinAdditions = transactions.filter((t) => t.amount > 0);
@@ -208,98 +210,52 @@ export function BottomTabBar() {
   const totalCoinsAdded = coinAdditions.reduce((acc, t) => acc + t.amount, 0);
 
   // Tab Items matching user specifications: Bat/Ball (Cricket), Cards (Casino), Person (Profile)
-  const navItems = [
+  const navItems: NavItem[] = [
     {
       id: 'sports',
       label: 'Cricket Live Scores',
-      href: '/',
-      icon: <CricketBatBallIcon className="w-8 h-8" />,
-      onClick: () => setShowProfileModal(false),
+      icon: <CricketBatBallIcon className="w-7 h-7" />,
+      onClick: () => {
+        setShowProfileModal(false);
+        router.push('/');
+      },
     },
     {
       id: 'casino',
       label: 'Live Casino Lounge',
-      href: '/casino',
-      icon: <AceCardIcon className="w-8 h-8" />,
-      onClick: () => setShowProfileModal(false),
+      icon: <AceCardIcon className="w-7 h-7" />,
+      onClick: () => {
+        setShowProfileModal(false);
+        router.push('/casino');
+      },
     },
     {
       id: 'profile',
       label: 'User Profile & Coin History',
-      href: '#profile',
-      icon: <ProfilePersonIcon className="w-8 h-8" />,
-      onClick: handleOpenProfile,
+      icon: <ProfilePersonIcon className="w-7 h-7" />,
+      onClick: () => {
+        handleOpenProfile();
+      },
     },
   ];
 
   return (
     <>
-      {/* Authentic Floating Limelight Navigation Bar with 3 items: Bat/Ball, Cards, Person */}
-      <nav
+      {/* Authentic Limelight Navigation Bar with Cricket, Casino, and Profile */}
+      <div
         aria-label="Bottom Navigation"
         className="lg:hidden fixed bottom-4 left-0 right-0 z-40 flex justify-center items-center pointer-events-none px-4 pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="relative pointer-events-auto flex items-center h-[68px] w-full max-w-md mx-auto rounded-2xl bg-surface/95 dark:bg-neutral-900/95 backdrop-blur-2xl border-2 border-surface-border shadow-2xl shadow-black/40">
-          {/* Guaranteed Spotlight Beam for 3 items (16.66% -> 50% -> 83.33%) */}
-          <motion.div
-            animate={{
-              left: activeIndex === 0 ? '16.66%' : activeIndex === 1 ? '50%' : '83.33%',
-            }}
-            transition={{
-              type: 'spring',
-              stiffness: 450,
-              damping: 32,
-            }}
-            style={{ transform: 'translateX(-50%)' }}
-            className="absolute top-0 w-24 pointer-events-none z-10 flex flex-col items-center"
-          >
-            {/* Top Red Spotlight Pill */}
-            <div className="w-16 h-1.5 rounded-full bg-brand-600 shadow-[0_0_20px_var(--brand-600),0_0_8px_var(--brand-600)] ring-1 ring-white/40" />
-
-            {/* Downward Angled Light Beam Cone */}
-            <div className="w-20 h-14 [clip-path:polygon(15%_100%,32%_0,68%_0,85%_100%)] bg-gradient-to-b from-brand-600/50 via-brand-600/18 to-transparent" />
-          </motion.div>
-
-          {/* 3 Tab Items */}
-          {navItems.map((item, index) => {
-            const isCurrent = activeIndex === index;
-
-            if (item.id === 'profile') {
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={item.onClick}
-                  aria-label={item.label}
-                  className={`relative z-20 flex-1 flex h-full items-center justify-center cursor-pointer transition-all duration-200 select-none ${
-                    isCurrent
-                      ? 'text-brand-600 dark:text-brand-500 scale-110 drop-shadow-[0_2px_12px_rgba(215,38,61,0.5)]'
-                      : 'text-surface-muted-text hover:text-surface-text opacity-40 hover:opacity-80 scale-100'
-                  }`}
-                >
-                  {item.icon}
-                </button>
-              );
-            }
-
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={item.onClick}
-                aria-label={item.label}
-                className={`relative z-20 flex-1 flex h-full items-center justify-center cursor-pointer transition-all duration-200 select-none ${
-                  isCurrent
-                    ? 'text-brand-600 dark:text-brand-500 scale-110 drop-shadow-[0_2px_12px_rgba(215,38,61,0.5)]'
-                    : 'text-surface-muted-text hover:text-surface-text opacity-40 hover:opacity-80 scale-100'
-                }`}
-              >
-                {item.icon}
-              </Link>
-            );
-          })}
+        <div className="pointer-events-auto">
+          <LimelightNav
+            items={navItems}
+            activeIndex={activeIndex}
+            className="w-[330px] max-w-[92vw] h-16 rounded-2xl bg-surface/95 dark:bg-card/95 backdrop-blur-2xl border-2 border-surface-border shadow-2xl shadow-black/50 justify-around px-2"
+            iconContainerClassName="flex-1"
+            limelightClassName="bg-brand-600 shadow-[0_0_20px_var(--brand-600)]"
+          />
         </div>
-      </nav>
+      </div>
 
       {/* ======================================================== */}
       {/* PROFILE MODAL: COINS ADDED COUNT & FULL TRANSACTION HISTORY */}

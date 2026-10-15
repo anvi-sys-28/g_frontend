@@ -101,7 +101,7 @@ class SoundEngine {
   /**
    * Continuous ball orbiting loop sound
    */
-  public startBallSpinLoop(durationSec: number = 6) {
+  public startBallSpinLoop(durationSec: number = 3.8) {
     if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;

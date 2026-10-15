@@ -65,9 +65,18 @@ const STORAGE_KEY_BALANCE = 'roulette_balance';
 const STORAGE_KEY_XP = 'roulette_player_xp';
 const STORAGE_KEY_RECENT = 'roulette_recent_numbers';
 
+function persistBalance(bal: number) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_BALANCE, String(bal));
+    localStorage.setItem('probability_playground_balance', String(bal));
+  }
+}
+
 function getInitialBalance(): number {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(STORAGE_KEY_BALANCE);
+    const saved =
+      localStorage.getItem('probability_playground_balance') ||
+      localStorage.getItem(STORAGE_KEY_BALANCE);
     if (saved && !isNaN(Number(saved))) {
       return Number(saved);
     }
@@ -161,9 +170,7 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       };
 
       const newBalance = balance - selectedChip;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BALANCE, String(newBalance));
-      }
+      persistBalance(newBalance);
 
       set({
         balance: newBalance,
@@ -205,9 +212,7 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
         };
       }
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BALANCE, String(newBalance));
-      }
+      persistBalance(newBalance);
 
       set({
         balance: newBalance,
@@ -226,9 +231,7 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       soundEffects.playClearSound();
 
       const newBalance = balance + totalBetAmount;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BALANCE, String(newBalance));
-      }
+      persistBalance(newBalance);
 
       set({
         balance: newBalance,
@@ -286,7 +289,7 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       const winningNumber = getRandomWinningNumber(wheelType);
       const pocketIndex = EUROPEAN_NUMBERS.indexOf(winningNumber);
 
-      const duration = fastSpin ? 2.5 : 6.0;
+      const duration = fastSpin ? 1.8 : 3.8;
       soundEffects.startBallSpinLoop(duration);
 
       set({
@@ -325,8 +328,8 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       const newBalance = balance + result.totalPayout;
       const updatedRecent = [winningNumber, ...recentNumbers.slice(0, 19)];
 
+      persistBalance(newBalance);
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BALANCE, String(newBalance));
         localStorage.setItem(STORAGE_KEY_RECENT, JSON.stringify(updatedRecent));
       }
 
@@ -366,16 +369,12 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
 
     addBalance: (amount: number) => {
       const newBal = get().balance + amount;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BALANCE, String(newBal));
-      }
+      persistBalance(newBal);
       set({ balance: newBal });
     },
 
     resetBalance: (amount: number = 2500) => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BALANCE, String(amount));
-      }
+      persistBalance(amount);
       set({ balance: amount, bets: {}, betHistoryStack: [] });
     },
   };
