@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { SmoothVideoCard } from '@/components/casino/SmoothVideoCard';
 import {
   Sparkles,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function CasinoPage() {
+  const router = useRouter();
   // User & Coin State
   const [userId, setUserId] = useState<string>('vip_player');
   const [role, setRole] = useState<string>('USER');
@@ -361,7 +363,13 @@ export default function CasinoPage() {
               provider={game.provider}
               playersCount={game.playersCount}
               tag={game.tag}
-              onPlayClick={() => setActiveGame(game.id as any)}
+              onPlayClick={() => {
+                if (game.id === 'roulette') {
+                  router.push('/roulette');
+                } else {
+                  setActiveGame(game.id as any);
+                }
+              }}
             />
           ))}
         </div>
