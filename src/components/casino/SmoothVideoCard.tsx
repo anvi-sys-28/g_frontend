@@ -36,61 +36,49 @@ export function SmoothVideoCard({
   const currentFrameIndex = useRef<number>(1);
   const imagesCache = useRef<Map<number, HTMLImageElement>>(new Map());
 
-  // Helper to format frame path: /R/frame_00001.webp -> /R/frame_00300.webp
-  const getFrameUrl = useCallback(
+  // Helper to load and cache a frame
+  const loadFrame = useCallback(
     (index: number) => {
+      if (imagesCache.current.has(index)) return imagesCache.current.get(index)!;
       const padded = String(index).padStart(5, '0');
-      return `${framesDir}/frame_${padded}.webp`;
+      const img = new window.Image();
+      img.src = `${framesDir}/frame_${padded}.webp`;
+      imagesCache.current.set(index, img);
+      return img;
     },
     [framesDir]
   );
 
-  // Preload initial buffer of frames on desktop mount for instant zero-lag playback
+  // Preload initial buffer of frames on mount for instant zero-lag hover playback
   useEffect(() => {
     let isCancelled = false;
-
-    // Skip heavy frame buffering on mobile/touch devices
-    const isTouchOnly = typeof window !== 'undefined' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    if (isTouchOnly) return;
-
-    const preloadBuffer = () => {
-      for (let i = 1; i <= 30; i++) {
-        if (isCancelled) break;
-        if (!imagesCache.current.has(i)) {
-          const img = new window.Image();
-          img.src = getFrameUrl(i);
-          imagesCache.current.set(i, img);
-        }
-      }
-    };
-
-    preloadBuffer();
+    for (let i = 1; i <= 60; i++) {
+      if (isCancelled) break;
+      loadFrame(i);
+    }
     return () => {
       isCancelled = true;
     };
-  }, [getFrameUrl]);
+  }, [loadFrame]);
 
-  // When hovered, stream and buffer the remaining frames
+  // When hovered, stream and buffer the remaining frames progressively
   useEffect(() => {
     if (!isHovered) return;
 
     let isCancelled = false;
-    let i = 41;
+    let nextBatch = 61;
 
     const streamRemaining = () => {
-      if (isCancelled || !isHovered || i > totalFrames) return;
+      if (isCancelled || !isHovered || nextBatch > totalFrames) return;
 
-      const batchEnd = Math.min(i + 20, totalFrames);
-      for (; i <= batchEnd; i++) {
-        if (!imagesCache.current.has(i)) {
-          const img = new window.Image();
-          img.src = getFrameUrl(i);
-          imagesCache.current.set(i, img);
-        }
+      const batchEnd = Math.min(nextBatch + 30, totalFrames);
+      for (let i = nextBatch; i <= batchEnd; i++) {
+        loadFrame(i);
       }
+      nextBatch = batchEnd + 1;
 
-      if (i <= totalFrames) {
-        setTimeout(streamRemaining, 40);
+      if (nextBatch <= totalFrames) {
+        setTimeout(streamRemaining, 35);
       }
     };
 
@@ -99,7 +87,7 @@ export function SmoothVideoCard({
     return () => {
       isCancelled = true;
     };
-  }, [isHovered, getFrameUrl, totalFrames]);
+  }, [isHovered, loadFrame, totalFrames]);
 
   // 60 FPS animation loop
   const renderFrame = useCallback(
@@ -107,15 +95,18 @@ export function SmoothVideoCard({
       if (!isHovered) return;
 
       const elapsed = time - lastFrameTime.current;
-      // Target 60 FPS (~16.6ms per frame)
-      if (elapsed >= 16.6) {
+      // Target ~45-60 FPS (~18ms per frame)
+      if (elapsed >= 18) {
         lastFrameTime.current = time;
 
         const canvas = canvasRef.current;
         if (canvas) {
           const ctx = canvas.getContext('2d');
-          const nextIndex = (currentFrameIndex.current % totalFrames) + 1;
-          const img = imagesCache.current.get(nextIndex);
+          const idx = currentFrameIndex.current;
+          let img = imagesCache.current.get(idx);
+          if (!img) {
+            img = loadFrame(idx);
+          }
 
           if (img && img.complete && img.naturalWidth > 0 && ctx) {
             if (canvas.width !== img.naturalWidth) {
@@ -123,24 +114,47 @@ export function SmoothVideoCard({
               canvas.height = img.naturalHeight;
             }
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            currentFrameIndex.current = nextIndex;
             setIsPlaying(true);
-          } else if (!img) {
-            // Queue load if missing
-            const newImg = new window.Image();
-            newImg.src = getFrameUrl(nextIndex);
-            imagesCache.current.set(nextIndex, newImg);
+            currentFrameIndex.current = (idx % totalFrames) + 1;
+          } else {
+            // If current frame is decoding, peek at next frame so video doesn't stall
+            const nextIdx = (idx % totalFrames) + 1;
+            const nextImg = imagesCache.current.get(nextIdx);
+            if (nextImg && nextImg.complete && nextImg.naturalWidth > 0 && ctx) {
+              if (canvas.width !== nextImg.naturalWidth) {
+                canvas.width = nextImg.naturalWidth;
+                canvas.height = nextImg.naturalHeight;
+              }
+              ctx.drawImage(nextImg, 0, 0, canvas.width, canvas.height);
+              setIsPlaying(true);
+              currentFrameIndex.current = (nextIdx % totalFrames) + 1;
+            }
           }
         }
       }
 
       animFrameId.current = requestAnimationFrame(renderFrame);
     },
-    [isHovered, totalFrames, getFrameUrl]
+    [isHovered, totalFrames, loadFrame]
   );
 
   useEffect(() => {
     if (isHovered) {
+      // Paint first available frame immediately so user sees instant response
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const firstImg = imagesCache.current.get(currentFrameIndex.current) || imagesCache.current.get(1);
+        if (firstImg && firstImg.complete && firstImg.naturalWidth > 0 && ctx) {
+          if (canvas.width !== firstImg.naturalWidth) {
+            canvas.width = firstImg.naturalWidth;
+            canvas.height = firstImg.naturalHeight;
+          }
+          ctx.drawImage(firstImg, 0, 0, canvas.width, canvas.height);
+          setIsPlaying(true);
+        }
+      }
+
       lastFrameTime.current = performance.now();
       animFrameId.current = requestAnimationFrame(renderFrame);
     } else {
@@ -174,15 +188,18 @@ export function SmoothVideoCard({
       sparkle={true}
       hover="brighten"
       clickPulse={true}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onPointerEnter={() => setIsHovered(true)}
+      onPointerLeave={() => setIsHovered(false)}
       className="w-full rounded-3xl overflow-hidden p-0 shadow-2xl bg-neutral-950"
     >
       <div
-        onMouseEnter={() => {
-          if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-            setIsHovered(true);
-          }
-        }}
+        onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onPointerEnter={() => setIsHovered(true)}
+        onPointerLeave={() => setIsHovered(false)}
+        onTouchStart={() => setIsHovered(true)}
         onClick={onPlayClick}
         className={`group relative overflow-hidden rounded-3xl bg-neutral-950 transition-all duration-300 cursor-pointer w-full h-full ${
           isHovered ? 'scale-[1.01]' : ''

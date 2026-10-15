@@ -182,7 +182,8 @@ export function IntroVideoPlayer({
     };
   }, [isStarted, hasEnded, renderLoop]);
 
-  // Audio playback lifecycle and gesture unlock
+  // [AUDIO DISABLED FOR NOW - PENDING SYNC]
+  /*
   useEffect(() => {
     if (!isStarted || hasEnded) return;
 
@@ -211,7 +212,6 @@ export function IntroVideoPlayer({
     };
   }, [isStarted, hasEnded, isMuted]);
 
-  // Clean up audio on unmount
   useEffect(() => {
     return () => {
       stopAudio();
@@ -228,18 +228,19 @@ export function IntroVideoPlayer({
       setIsMuted(nextMuted);
     }
   };
+  */
 
   const progressPercent = Math.min(100, Math.round((currentFrameNum / totalFrames) * 100));
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black flex items-center justify-center select-none">
-      {/* Background Audio Soundtrack */}
-      <audio
+      {/* Background Audio Soundtrack (Disabled for now) */}
+      {/* <audio
         ref={audioRef}
         src="/m.mp3"
         preload="auto"
         playsInline
-      />
+      /> */}
 
       {/* 60 FPS Video Canvas */}
       <canvas
@@ -257,8 +258,8 @@ export function IntroVideoPlayer({
 
         {/* Right Action Buttons */}
         <div className="flex items-center gap-2">
-          {/* Sound Mute/Unmute Toggle */}
-          <button
+          {/* Sound Mute/Unmute Toggle (Disabled for now) */}
+          {/* <button
             type="button"
             onClick={toggleMute}
             aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
@@ -269,7 +270,7 @@ export function IntroVideoPlayer({
             ) : (
               <Volume2 className="w-4 h-4 text-[#f5d27a]" />
             )}
-          </button>
+          </button> */}
 
           {/* Skip Intro to Login */}
           <button
