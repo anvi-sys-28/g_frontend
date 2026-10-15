@@ -270,13 +270,10 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
       </header>
 
       {/* Notice displayed when API key quota is exhausted across all three keys */}
-      {(meta.isAllKeysExhausted || (isDataOld && !isMock)) && (
-        <div className="bg-amber-950 border-b border-amber-500/40 text-amber-200 px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 shadow-sm">
+      {(meta.isAllKeysExhausted || meta.lastError?.includes('out of limit') || (isDataOld && !isMock)) && (
+        <div className="bg-amber-950/90 border-b border-amber-500/50 text-amber-200 px-4 py-2.5 text-center text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-sm tracking-wide">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <span>⚠️ Limit over from all three keys.</span>
-          <span className="text-amber-400/80 text-[11px] font-normal">
-            (Daily live quota reached across all keys. Serving cached scores until next reset.)
-          </span>
+          <span>out of limit for today</span>
         </div>
       )}
 
@@ -409,10 +406,15 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <h2 className="text-base sm:text-lg font-bold text-white">Top Matches</h2>
-                {liveMatches.length > 0 && (
+                {liveMatches.length > 0 ? (
                   <div className="px-2.5 py-0.5 rounded-full bg-red-950/90 border border-red-500/70 text-red-300 text-xs font-bold flex items-center gap-1.5 shadow-[0_0_10px_rgba(239,68,68,0.35)]">
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
                     <span>{liveMatches.length} Live</span>
+                  </div>
+                ) : (
+                  <div className="px-2.5 py-0.5 rounded-full bg-neutral-900 border border-neutral-700/80 text-neutral-400 text-xs font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-500" />
+                    <span>0 Live</span>
                   </div>
                 )}
               </div>

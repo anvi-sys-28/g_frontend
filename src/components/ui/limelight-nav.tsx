@@ -98,7 +98,7 @@ export const LimelightNav = ({
   };
 
   return (
-    <nav className={`relative inline-flex items-center h-16 rounded-2xl bg-white text-neutral-900 border border-neutral-200/90 shadow-[0_12px_40px_rgba(0,0,0,0.14)] px-2 ${className}`}>
+    <nav className={`relative inline-flex items-center h-16 rounded-2xl bg-[#121214] text-white border border-neutral-800/90 shadow-[0_12px_40px_rgba(0,0,0,0.7)] backdrop-blur-md px-2 ${className}`}>
       {items.map(({ id, icon, label, onClick }, index) => (
         <a
           key={id}
@@ -111,7 +111,7 @@ export const LimelightNav = ({
         >
           {cloneElement(icon, {
             className: `w-7 h-7 transition-colors duration-200 ${
-              activeIndex === index ? 'text-black opacity-100' : 'text-neutral-400 opacity-60 hover:opacity-90'
+              activeIndex === index ? 'text-white opacity-100' : 'text-neutral-400 opacity-60 hover:opacity-90'
             } ${icon.props?.className || ''} ${iconClassName || ''}`,
           })}
         </a>
@@ -126,8 +126,8 @@ export const LimelightNav = ({
         style={{ left: '-999px' }}
       >
         {/* Soft diffused red spotlight glow underneath the active icon */}
-        <div className="absolute left-[-40%] top-[4px] w-[180%] h-14 bg-gradient-to-b from-[#E11D48]/25 via-[#E11D48]/10 to-transparent [clip-path:polygon(10%_100%,25%_0,75%_0,90%_100%)] pointer-events-none blur-[1px]" />
-        <div className="absolute left-[-20%] top-[22px] w-[140%] h-7 bg-[#E11D48]/20 rounded-full blur-md pointer-events-none" />
+        <div className="absolute left-[-40%] top-[4px] w-[180%] h-14 bg-gradient-to-b from-[#E11D48]/35 via-[#E11D48]/15 to-transparent [clip-path:polygon(10%_100%,25%_0,75%_0,90%_100%)] pointer-events-none blur-[1px]" />
+        <div className="absolute left-[-20%] top-[22px] w-[140%] h-7 bg-[#E11D48]/25 rounded-full blur-md pointer-events-none" />
       </div>
     </nav>
   );

@@ -1,5 +1,6 @@
-import { Match } from '@/types/models';
+import { Match, MatchFormat, MatchStatus, TeamScoreSummary } from '@/types/models';
 import { redis } from './redis';
+import { getTeamCode } from './teams';
 
 export interface MatchesDataMeta {
   provider: string;
@@ -26,94 +27,21 @@ export interface TodayMatchesResponse {
   isMock: boolean;
 }
 
+// Resilient fallback fixtures: Only completed and upcoming matches. NEVER fake live matches.
 const FALLBACK_MATCHES: Match[] = [
   {
-    id: 'mock-live-1',
-    slug: 'ind-vs-aus-1st-t20i-2026',
-    title: 'India vs Australia, 1st T20I',
-    seriesId: 'series-ind-aus-2026',
-    seriesName: 'Australia Tour of India 2026',
-    format: 'T20',
-    status: 'live',
-    statusText: 'IND need 32 runs in 24 balls to win',
-    venue: 'Wankhede Stadium',
-    city: 'Mumbai',
-    startTime: new Date(Date.now() - 3600000).toISOString(),
-    currentInningsNumber: 2,
-    teamA: {
-      id: 'team-ind',
-      name: 'India',
-      shortName: 'IND',
-      code: 'IND',
-      primaryColor: '#1d4ed8',
-    },
-    teamB: {
-      id: 'team-aus',
-      name: 'Australia',
-      shortName: 'AUS',
-      code: 'AUS',
-      primaryColor: '#eab308',
-    },
-    teamAScore: {
-      runs: 165,
-      wickets: 3,
-      overs: 16.0,
-      display: '165/3 (16.0 ov)',
-    },
-    teamBScore: {
-      runs: 196,
-      wickets: 6,
-      overs: 20.0,
-      display: '196/6 (20.0 ov)',
-    },
-  },
-  {
-    id: 'mock-live-2',
-    slug: 'csk-vs-mi-ipl-2026',
-    title: 'Chennai Super Kings vs Mumbai Indians, Match 24',
-    seriesId: 'series-ipl-2026',
-    seriesName: 'Indian Premier League 2026',
-    format: 'T20',
-    status: 'live',
-    statusText: 'MI opt to bowl first | Rain delayed start',
-    venue: 'M. A. Chidambaram Stadium',
-    city: 'Chennai',
-    startTime: new Date(Date.now() - 7200000).toISOString(),
-    currentInningsNumber: 1,
-    teamA: {
-      id: 'team-csk',
-      name: 'Chennai Super Kings',
-      shortName: 'CSK',
-      code: 'CSK',
-      primaryColor: '#facc15',
-    },
-    teamB: {
-      id: 'team-mi',
-      name: 'Mumbai Indians',
-      shortName: 'MI',
-      code: 'MI',
-      primaryColor: '#0284c7',
-    },
-    teamAScore: {
-      runs: 182,
-      wickets: 4,
-      overs: 18.2,
-      display: '182/4 (18.2 ov)',
-    },
-  },
-  {
-    id: 'mock-upcoming-1',
+    id: 'fixture-completed-1',
     slug: 'eng-vs-sa-3rd-odi-2026',
     title: 'England vs South Africa, 3rd ODI',
     seriesId: 'series-eng-sa-2026',
     seriesName: 'South Africa Tour of England 2026',
     format: 'ODI',
-    status: 'upcoming',
-    statusText: 'Match starts at 14:00 local time',
+    status: 'completed',
+    statusText: 'South Africa won by 4 wickets',
     venue: "Lord's Cricket Ground",
     city: 'London',
-    startTime: new Date(Date.now() + 14400000).toISOString(),
-    currentInningsNumber: 0,
+    startTime: new Date(Date.now() - 86400000).toISOString(),
+    currentInningsNumber: 2,
     teamA: {
       id: 'team-eng',
       name: 'England',
@@ -128,8 +56,395 @@ const FALLBACK_MATCHES: Match[] = [
       code: 'SA',
       primaryColor: '#16a34a',
     },
+    teamAScore: {
+      runs: 284,
+      wickets: 9,
+      overs: 50.0,
+      display: '284/9 (50.0 ov)',
+    },
+    teamBScore: {
+      runs: 288,
+      wickets: 6,
+      overs: 47.4,
+      display: '288/6 (47.4 ov)',
+    },
+  },
+  {
+    id: 'fixture-upcoming-1',
+    slug: 'ind-vs-aus-1st-t20i-2026',
+    title: 'India vs Australia, 1st T20I',
+    seriesId: 'series-ind-aus-2026',
+    seriesName: 'Australia Tour of India 2026',
+    format: 'T20',
+    status: 'upcoming',
+    statusText: 'Starts at 19:00 IST',
+    venue: 'Wankhede Stadium',
+    city: 'Mumbai',
+    startTime: new Date(Date.now() + 18000000).toISOString(),
+    currentInningsNumber: 0,
+    teamA: {
+      id: 'team-ind',
+      name: 'India',
+      shortName: 'IND',
+      code: 'IND',
+      primaryColor: '#1d4ed8',
+    },
+    teamB: {
+      id: 'team-aus',
+      name: 'Australia',
+      shortName: 'AUS',
+      code: 'AUS',
+      primaryColor: '#eab308',
+    },
   },
 ];
+
+// Configured 3 API keys pool for CricAPI (CricketData.org)
+const CONFIGURED_API_KEYS = [
+  'f35f0f5a-d337-4ead-a0ba-787f8f990e3d',
+  '2633dd87-4207-40af-95d0-4a68f7a12c87',
+  '1577311c-753b-4ac3-94b5-a5384079e793',
+];
+
+// Global in-memory pool tracking for server requests
+const exhaustedKeySet = new Set<string>();
+let exhaustedDate = '';
+
+function resetExhaustedKeysIfNewDay() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (exhaustedDate !== today) {
+    exhaustedKeySet.clear();
+    exhaustedDate = today;
+  }
+}
+
+function deriveMatchFormat(rawType?: string): MatchFormat {
+  const t = (rawType || '').toLowerCase();
+  if (t.includes('t20')) return 'T20';
+  if (t.includes('odi')) return 'ODI';
+  if (t.includes('test')) return 'TEST';
+  if (t.includes('100') || t.includes('hundred') || t.includes('t10')) return '100BALL';
+  return 'T20';
+}
+
+function extractMatchNumber(name: string): string | undefined {
+  if (!name) return undefined;
+  const m = name.match(/(\d+(?:st|nd|rd|th)?\s+(?:Match|T20I?|ODI|Test)|Match\s+\d+|Final|Semi-Final)/i);
+  if (m) return m[0].trim();
+  const parts = name.split(',');
+  return parts.length > 1 ? parts[1].trim() : undefined;
+}
+
+function computeTeamScoreSummaries(
+  scores: Array<{ r: number; w: number; o: number; inning: string }>,
+  teamAName: string,
+  teamBName: string
+): { teamAScore?: TeamScoreSummary; teamBScore?: TeamScoreSummary } {
+  if (!scores || scores.length === 0) return {};
+
+  const teamAScores: Array<{ r: number; w: number; o: number; inning: string }> = [];
+  const teamBScores: Array<{ r: number; w: number; o: number; inning: string }> = [];
+
+  const normA = teamAName.toLowerCase();
+  const normB = teamBName.toLowerCase();
+
+  for (const s of scores) {
+    const innLower = (s.inning || '').toLowerCase();
+    if (innLower.includes(normA) || (teamAScores.length === 0 && !innLower.includes(normB))) {
+      teamAScores.push(s);
+    } else {
+      teamBScores.push(s);
+    }
+  }
+
+  const formatSummary = (
+    teamScores: Array<{ r: number; w: number; o: number; inning: string }>
+  ): TeamScoreSummary | undefined => {
+    if (teamScores.length === 0) return undefined;
+    const latest = teamScores[teamScores.length - 1];
+
+    if (teamScores.length > 1) {
+      const parts = teamScores.map((ts, idx) => {
+        const isLast = idx === teamScores.length - 1;
+        const scoreStr = ts.w >= 10 ? `${ts.r}` : `${ts.r}/${ts.w}`;
+        return isLast ? `${scoreStr} (${ts.o})` : scoreStr;
+      });
+      return {
+        runs: latest.r,
+        wickets: latest.w,
+        overs: latest.o,
+        display: parts.join(' & '),
+      };
+    }
+
+    const scoreStr = latest.w >= 10 ? `${latest.r}` : `${latest.r}/${latest.w}`;
+    return {
+      runs: latest.r,
+      wickets: latest.w,
+      overs: latest.o,
+      display: `${scoreStr} (${latest.o})`,
+    };
+  };
+
+  return {
+    teamAScore: formatSummary(teamAScores),
+    teamBScore: formatSummary(teamBScores),
+  };
+}
+
+function deriveMatchStatus(raw: any): MatchStatus {
+  const statusTextLower = (raw.status || '').toLowerCase();
+
+  // Abandoned / Cancelled / No Result
+  if (
+    statusTextLower.includes('abandoned') ||
+    statusTextLower.includes('no result') ||
+    statusTextLower.includes('cancelled')
+  ) {
+    return 'abandoned';
+  }
+
+  // Explicit match ended boolean from CricAPI
+  if (raw.matchEnded === true) {
+    return 'completed';
+  }
+
+  // Explicit match started boolean from CricAPI
+  if (raw.matchStarted === true && raw.matchEnded === false) {
+    return 'live';
+  }
+
+  if (raw.matchStarted === false) {
+    return 'upcoming';
+  }
+
+  // Text clues for finished
+  if (
+    statusTextLower.includes('won by') ||
+    statusTextLower.includes('win by') ||
+    statusTextLower.includes('drawn') ||
+    statusTextLower.includes('tied') ||
+    statusTextLower.includes('conceded') ||
+    Boolean(raw.matchWinner)
+  ) {
+    return 'completed';
+  }
+
+  // Text clues for live
+  if (
+    statusTextLower.includes('need') ||
+    statusTextLower.includes('trail by') ||
+    statusTextLower.includes('lead by') ||
+    statusTextLower.includes('opt to') ||
+    statusTextLower.includes('chose to') ||
+    statusTextLower.includes('day ') ||
+    statusTextLower.includes('tea break') ||
+    statusTextLower.includes('lunch') ||
+    statusTextLower.includes('stumps') ||
+    statusTextLower.includes('innings break')
+  ) {
+    return 'live';
+  }
+
+  return 'upcoming';
+}
+
+function normalizeCricApiMatch(raw: any): Match {
+  let rawTeamAName = raw.teamInfo?.[0]?.name || raw.teams?.[0] || 'Team A';
+  let rawTeamBName = raw.teamInfo?.[1]?.name || raw.teams?.[1] || 'Team B';
+
+  if ((!raw.teams || raw.teams.length < 2) && raw.name && raw.name.includes(' vs ')) {
+    const vsIndex = raw.name.indexOf(' vs ');
+    const beforeVs = raw.name.substring(0, vsIndex).trim();
+    const afterVs = raw.name.substring(vsIndex + 4).trim();
+    const afterVsTeam = afterVs.split(',')[0].trim();
+    rawTeamAName = beforeVs;
+    rawTeamBName = afterVsTeam;
+  }
+
+  const teamACode = getTeamCode(rawTeamAName, raw.teamInfo?.[0]?.shortname);
+  const teamBCode = getTeamCode(rawTeamBName, raw.teamInfo?.[1]?.shortname);
+
+  const scores = raw.score || [];
+  const { teamAScore, teamBScore } = computeTeamScoreSummaries(scores, rawTeamAName, rawTeamBName);
+  const status = deriveMatchStatus(raw);
+  const matchNumber = extractMatchNumber(raw.name || '');
+
+  let seriesName = raw.series_id || 'Cricket Tournament';
+  if (raw.name) {
+    const nameParts = raw.name.split(',').map((p: string) => p.trim());
+    if (nameParts.length >= 3) {
+      seriesName = nameParts.slice(2).join(', ');
+    } else if (nameParts.length === 2) {
+      seriesName = nameParts[0];
+    } else {
+      seriesName = raw.name;
+    }
+  }
+
+  return {
+    id: raw.id || 'unknown',
+    slug: (raw.name || `${teamACode}-vs-${teamBCode}`).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    title: `${rawTeamAName} vs ${rawTeamBName}`,
+    seriesId: raw.series_id || 'series-default',
+    seriesName,
+    format: deriveMatchFormat(raw.matchType),
+    status,
+    statusText: raw.status || (status === 'live' ? 'Live in play' : 'Scheduled'),
+    venue: raw.venue || 'Cricket Ground',
+    city: raw.venue ? raw.venue.split(',')[1]?.trim() || raw.venue.split(',')[0]?.trim() || 'City' : 'City',
+    startTime: raw.dateTimeGMT || (raw.date ? `${raw.date}T00:00:00Z` : new Date().toISOString()),
+    matchNumber,
+    teamA: {
+      id: teamACode.toLowerCase(),
+      name: rawTeamAName,
+      shortName: teamACode,
+      code: teamACode,
+      logoUrl: raw.teamInfo?.[0]?.img,
+    },
+    teamB: {
+      id: teamBCode.toLowerCase(),
+      name: rawTeamBName,
+      shortName: teamBCode,
+      code: teamBCode,
+      logoUrl: raw.teamInfo?.[1]?.img,
+    },
+    teamAScore,
+    teamBScore,
+    scores,
+    toss: raw.tossWinner
+      ? {
+          winnerId: getTeamCode(raw.tossWinner).toLowerCase(),
+          decision: (raw.tossChoice as any) || 'bat',
+          text: `${raw.tossWinner} chose to ${raw.tossChoice || 'bat'}`,
+        }
+      : undefined,
+    winnerId: raw.matchWinner ? getTeamCode(raw.matchWinner).toLowerCase() : undefined,
+    resultText: raw.status,
+    currentInningsNumber: scores.length > 0 ? scores.length : 1,
+    hasSquad: raw.hasSquad,
+    fantasyEnabled: raw.fantasyEnabled,
+    bbbEnabled: raw.bbbEnabled,
+  };
+}
+
+async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
+  resetExhaustedKeysIfNewDay();
+
+  const envKeys = process.env.CRICKET_API_KEYS
+    ? process.env.CRICKET_API_KEYS.split(',').map((k) => k.trim())
+    : [];
+  if (process.env.CRICKET_API_KEY) {
+    envKeys.push(process.env.CRICKET_API_KEY.trim());
+  }
+
+  const allCandidateKeys = Array.from(new Set([...envKeys, ...CONFIGURED_API_KEYS])).filter(
+    (k) => k && k !== 'placeholder' && !k.includes('test-key')
+  );
+
+  let quotaExhaustedCount = 0;
+
+  for (const key of allCandidateKeys) {
+    if (exhaustedKeySet.has(key)) {
+      quotaExhaustedCount++;
+      continue;
+    }
+
+    try {
+      const res = await fetch(`https://api.cricapi.com/v1/currentMatches?apikey=${key}&offset=0`, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(7000),
+      });
+
+      if (res.status === 429) {
+        exhaustedKeySet.add(key);
+        quotaExhaustedCount++;
+        continue;
+      }
+
+      if (!res.ok) {
+        continue;
+      }
+
+      const json = await res.json();
+      if (json.status !== 'success') {
+        const reason = String(json.reason || json.message || '').toLowerCase();
+        if (
+          reason.includes('exceeded limit') ||
+          reason.includes('blocking') ||
+          reason.includes('hit limit') ||
+          reason.includes('rate limit')
+        ) {
+          exhaustedKeySet.add(key);
+          quotaExhaustedCount++;
+          continue;
+        }
+        continue;
+      }
+
+      if (Array.isArray(json.data)) {
+        const matches: Match[] = json.data.map(normalizeCricApiMatch);
+        const liveMatches = matches.filter((m) => m.status === 'live');
+        const upcomingMatches = matches.filter((m) => m.status === 'upcoming');
+        const finishedMatches = matches.filter((m) => m.status === 'completed' || m.status === 'abandoned');
+
+        return {
+          matches,
+          meta: {
+            provider: 'cricketdata',
+            dailyBudget: 100 * allCandidateKeys.length,
+            usableBudget: 80 * allCandidateKeys.length,
+            callsToday: json.info?.hitsToday || 1,
+            remainingBudget: Math.max(0, (json.info?.hitsLimit || 100) - (json.info?.hitsToday || 1)),
+            lastSuccessfulFetch: new Date().toISOString(),
+            lastError: null,
+            nextScheduledPoll: null,
+            pollIntervalMs: 60000,
+            isBudgetExhausted: false,
+            isAllKeysExhausted: false,
+            totalMatches: matches.length,
+            liveMatches: liveMatches.length,
+            upcomingMatches: upcomingMatches.length,
+            finishedMatches: finishedMatches.length,
+            updatedAt: new Date().toISOString(),
+          },
+          isMock: false,
+        };
+      }
+    } catch {
+      // Network timeout or connection drop for this key, try next
+      continue;
+    }
+  }
+
+  // If all keys were tried and exhausted their quota
+  if (quotaExhaustedCount >= allCandidateKeys.length && allCandidateKeys.length > 0) {
+    return {
+      matches: [],
+      meta: {
+        provider: 'cricketdata',
+        dailyBudget: 100 * allCandidateKeys.length,
+        usableBudget: 80 * allCandidateKeys.length,
+        callsToday: 100 * allCandidateKeys.length,
+        remainingBudget: 0,
+        lastSuccessfulFetch: null,
+        lastError: 'out of limit for today',
+        nextScheduledPoll: null,
+        pollIntervalMs: 60000,
+        isBudgetExhausted: true,
+        isAllKeysExhausted: true,
+        totalMatches: 0,
+        liveMatches: 0,
+        upcomingMatches: 0,
+        finishedMatches: 0,
+        updatedAt: new Date().toISOString(),
+      },
+      isMock: false,
+    };
+  }
+
+  return null;
+}
 
 export async function getTodayMatches(): Promise<TodayMatchesResponse> {
   const providerConfig = process.env.CRICKET_PROVIDER || 'cricketdata';
@@ -153,15 +468,16 @@ export async function getTodayMatches(): Promise<TodayMatchesResponse> {
           ? JSON.parse(metaRaw)
           : {
               provider: providerConfig,
-              dailyBudget: 100,
-              usableBudget: 80,
+              dailyBudget: 300,
+              usableBudget: 240,
               callsToday: 1,
-              remainingBudget: 79,
+              remainingBudget: 239,
               lastSuccessfulFetch: new Date().toISOString(),
               lastError: null,
               nextScheduledPoll: null,
               pollIntervalMs: 60000,
               isBudgetExhausted: false,
+              isAllKeysExhausted: false,
               totalMatches: matches.length,
               liveMatches: matches.filter((m) => m.status === 'live').length,
               upcomingMatches: matches.filter((m) => m.status === 'upcoming').length,
@@ -169,11 +485,16 @@ export async function getTodayMatches(): Promise<TodayMatchesResponse> {
               updatedAt: new Date().toISOString(),
             };
 
+        // If meta indicates keys are exhausted, make sure it reflects "out of limit for today"
+        if (meta.isAllKeysExhausted) {
+          meta.lastError = 'out of limit for today';
+        }
+
         return { matches, meta, isMock };
       }
     }
-  } catch (err: any) {
-    // Redis unavailable or connection timeout, fallback to HTTP
+  } catch {
+    // Redis unavailable or connection timeout, fallback to next source
   }
 
   // 2. Try fetching from backend / realtime service REST endpoint
@@ -189,13 +510,20 @@ export async function getTodayMatches(): Promise<TodayMatchesResponse> {
     });
     if (res.ok) {
       const json = await res.json();
-      if (Array.isArray(json.matches) && json.matches.length > 0) {
+      if (Array.isArray(json.matches)) {
+        const meta = json.meta || {
+          provider: providerConfig,
+          updatedAt: new Date().toISOString(),
+        };
+
+        if (meta.isAllKeysExhausted) {
+          meta.lastError = 'out of limit for today';
+        }
+
+        // Return real matches even if matches.length is 0 or liveMatches is 0
         return {
           matches: json.matches,
-          meta: json.meta || {
-            provider: providerConfig,
-            updatedAt: new Date().toISOString(),
-          },
+          meta,
           isMock,
         };
       }
@@ -204,22 +532,35 @@ export async function getTodayMatches(): Promise<TodayMatchesResponse> {
     // Backend service currently starting or unreachable
   }
 
-  // 3. Fallback: Return resilient initial matches
+  // 3. Direct fetch from CricAPI using multi-key pool
+  if (!isMock) {
+    try {
+      const cricApiResult = await fetchFromCricApiPool();
+      if (cricApiResult) {
+        return cricApiResult;
+      }
+    } catch {
+      // Fall through to resilient fallback if network call fails
+    }
+  }
+
+  // 4. Resilient Fallback: Return matches with 0 live matches (NO fake live data)
   return {
     matches: FALLBACK_MATCHES,
     meta: {
       provider: 'fallback',
-      dailyBudget: 100,
-      usableBudget: 80,
+      dailyBudget: 300,
+      usableBudget: 240,
       callsToday: 0,
-      remainingBudget: 80,
+      remainingBudget: 240,
       lastSuccessfulFetch: new Date().toISOString(),
       lastError: null,
       nextScheduledPoll: null,
       pollIntervalMs: 60000,
       isBudgetExhausted: false,
+      isAllKeysExhausted: false,
       totalMatches: FALLBACK_MATCHES.length,
-      liveMatches: FALLBACK_MATCHES.filter((m) => m.status === 'live').length,
+      liveMatches: 0, // Real 0 live matches
       upcomingMatches: FALLBACK_MATCHES.filter((m) => m.status === 'upcoming').length,
       finishedMatches: FALLBACK_MATCHES.filter((m) => m.status === 'completed' || m.status === 'abandoned').length,
       updatedAt: new Date().toISOString(),
