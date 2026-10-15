@@ -17,6 +17,8 @@ import {
   LogOut,
   AlertTriangle,
   SlidersHorizontal,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface MatchListViewProps {
@@ -26,24 +28,59 @@ interface MatchListViewProps {
 }
 
 export function MatchListView({ initialMatches, meta, isMock }: MatchListViewProps) {
+  const [matches, setMatches] = useState<Match[]>(initialMatches);
+  const [currentMeta, setCurrentMeta] = useState<MatchesDataMeta>(meta);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [refreshToast, setRefreshToast] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<string>('top');
   const [collapsedSeries, setCollapsedSeries] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [bannerSlide, setBannerSlide] = useState<number>(0);
 
+  // Manual "GET DATA" button handler: fetches real-time API data on-demand without wasting background quota
+  const handleGetData = async () => {
+    setIsRefreshing(true);
+    setRefreshToast(null);
+    try {
+      const res = await fetch('/api/matches/today?refresh=true', {
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.matches)) {
+          setMatches(json.matches);
+        }
+        if (json.meta) {
+          setCurrentMeta(json.meta);
+        }
+        setRefreshToast('Live matches updated');
+        setTimeout(() => setRefreshToast(null), 3000);
+      } else {
+        setRefreshToast('Showing latest cached matches');
+        setTimeout(() => setRefreshToast(null), 3000);
+      }
+    } catch {
+      setRefreshToast('Network error, showing offline data');
+      setTimeout(() => setRefreshToast(null), 3000);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Categorize matches
-  const liveMatches = useMemo(() => initialMatches.filter((m) => m.status === 'live'), [initialMatches]);
-  const upcomingMatches = useMemo(() => initialMatches.filter((m) => m.status === 'upcoming'), [initialMatches]);
+  const liveMatches = useMemo(() => matches.filter((m) => m.status === 'live'), [matches]);
+  const upcomingMatches = useMemo(() => matches.filter((m) => m.status === 'upcoming'), [matches]);
   const finishedMatches = useMemo(
-    () => initialMatches.filter((m) => m.status === 'completed' || m.status === 'abandoned'),
-    [initialMatches]
+    () => matches.filter((m) => m.status === 'completed' || m.status === 'abandoned'),
+    [matches]
   );
 
   // Filter matches based on search query
   const searchedMatches = useMemo(() => {
-    if (!searchQuery.trim()) return initialMatches;
+    if (!searchQuery.trim()) return matches;
     const q = searchQuery.toLowerCase();
-    return initialMatches.filter(
+    return matches.filter(
       (m) =>
         m.teamA.name.toLowerCase().includes(q) ||
         m.teamA.code.toLowerCase().includes(q) ||
@@ -52,7 +89,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
         (m.seriesName && m.seriesName.toLowerCase().includes(q)) ||
         (m.venue && m.venue.toLowerCase().includes(q))
     );
-  }, [initialMatches, searchQuery]);
+  }, [matches, searchQuery]);
 
   // Carousel ref and auto-scroll logic
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -212,7 +249,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
     return Math.max(1, Math.round((nextStart - now) / (1000 * 3600)));
   }, [upcomingMatches]);
 
-  const isDataOld = meta.isBudgetExhausted;
+  const isDataOld = currentMeta.isBudgetExhausted;
 
   const heroBanners = [
     {
@@ -237,7 +274,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
 
   return (
     <div className="w-full text-white">
-      {/* 1. TOP HEADER BAR: Golden Spade Emblem + LiveCricket | Search Pill | Logout Icon */}
+      {/* 1. TOP HEADER BAR: Golden Spade Emblem + LiveCricket | Search Pill | GET DATA Button | Logout Icon */}
       <header className="sticky top-0 z-30 bg-[#0c0d12] border-b border-amber-500/20 px-3 sm:px-6 py-2.5 transition-all shadow-md">
         <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Golden Spade Logo + LiveCricket */}
@@ -257,6 +294,17 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
             />
           </div>
 
+          {/* Action: "GET DATA" button to fetch live API data on demand without wasting quota */}
+          <button
+            onClick={handleGetData}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-neutral-950 font-black text-xs uppercase tracking-wider hover:from-amber-300 hover:to-yellow-400 active:scale-95 transition-all shadow-[0_0_12px_rgba(245,158,11,0.5)] shrink-0 disabled:opacity-75"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isRefreshing ? 'FETCHING...' : 'GET DATA'}</span>
+            <span className="sm:hidden">{isRefreshing ? '...' : 'GET DATA'}</span>
+          </button>
+
           {/* Right: Gold-bordered Logout / Exit Icon Button */}
           <button
             onClick={handleLogout}
@@ -269,8 +317,16 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
         </div>
       </header>
 
+      {/* Real-time Data Toast Notification */}
+      {refreshToast && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full bg-amber-500 text-neutral-950 text-xs font-black shadow-xl flex items-center gap-1.5 animate-bounce">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{refreshToast}</span>
+        </div>
+      )}
+
       {/* Notice displayed when API key quota is exhausted across all three keys */}
-      {(meta.isAllKeysExhausted || meta.lastError?.includes('out of limit') || (isDataOld && !isMock)) && (
+      {(currentMeta.isAllKeysExhausted || currentMeta.lastError?.includes('out of limit') || (isDataOld && !isMock)) && (
         <div className="bg-amber-950/90 border-b border-amber-500/50 text-amber-200 px-4 py-2.5 text-center text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-sm tracking-wide">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <span>out of limit for today</span>

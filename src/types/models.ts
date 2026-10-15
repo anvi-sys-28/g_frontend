@@ -277,3 +277,84 @@ export interface Commentary {
   isWicket: boolean;
   timestamp: number;
 }
+
+export interface BatsmanDetail {
+  id: string;
+  name: string;
+  dismissal: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  strikeRate: number;
+}
+
+export interface BowlerDetail {
+  id: string;
+  name: string;
+  overs: number;
+  maidens: number;
+  runs: number;
+  wickets: number;
+  economy: number;
+  wides: number;
+  noBalls: number;
+}
+
+export interface InningScorecard {
+  inning: string;
+  battingTeamName: string;
+  batting: BatsmanDetail[];
+  bowling: BowlerDetail[];
+  totalScore?: string;
+  overs?: number;
+  wickets?: number;
+  runs?: number;
+}
+
+export interface MatchDetailData {
+  match: Match;
+  scorecard: InningScorecard[];
+  squads?: {
+    teamA: { name: string; players: string[] };
+    teamB: { name: string; players: string[] };
+  };
+  headToHead?: {
+    teamAWins: number;
+    teamBWins: number;
+    recentMatches: Array<{
+      title: string;
+      teamAScore: string;
+      teamBScore: string;
+      result: string;
+    }>;
+  };
+  teamComparison?: {
+    overall: {
+      teamAMatches: number;
+      teamBMatches: number;
+      teamAWinRate: string;
+      teamBWinRate: string;
+      teamAAvgScore: number;
+      teamBAvgScore: number;
+    };
+    onVenue: {
+      teamAMatches: number;
+      teamBMatches: number;
+      teamAWinRate: string;
+      teamBWinRate: string;
+      teamAAvgScore: number;
+      teamBAvgScore: number;
+    };
+  };
+  teamForm?: {
+    teamA: string[];
+    teamB: string[];
+  };
+  broadcast?: string;
+  whoWillWin?: {
+    teamAVotes: number;
+    teamBVotes: number;
+    totalVotes: number;
+  };
+}
