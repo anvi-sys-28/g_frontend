@@ -81,6 +81,8 @@ function getInitialRecentCards(): RecentRoundEntry[] {
   ];
 }
 
+let activeDealTimer: ReturnType<typeof setTimeout> | null = null;
+
 export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
   return {
     selectedSide: 'ANDAR',
@@ -191,65 +193,81 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
         return;
       }
 
-      // Animated dealing sequence (cards deal alternately)
+      // Animated dealing sequence (cards deal briskly and smoothly)
       const totalSteps = result.dealtCards.length;
       let currentIdx = 0;
 
+      if (activeDealTimer) {
+        clearTimeout(activeDealTimer);
+        activeDealTimer = null;
+      }
+
       const dealNextCard = () => {
-        if (currentIdx >= totalSteps) {
-          // Finished dealing
-          const updatedRecent = [
-            { card: result.matchingCard, winningSide: result.winningSide },
-            ...get().recentResults.slice(0, 14),
-          ];
+        try {
+          if (currentIdx >= totalSteps) {
+            // Finished dealing
+            const updatedRecent = [
+              { card: result.matchingCard, winningSide: result.winningSide },
+              ...get().recentResults.slice(0, 14),
+            ];
 
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(STORAGE_KEY_RECENT_AB, JSON.stringify(updatedRecent));
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(STORAGE_KEY_RECENT_AB, JSON.stringify(updatedRecent));
+            }
+
+            if (result.won && result.payout) {
+              sharedStore.addBalance(result.payout);
+              andarBaharAudio.playWinChime();
+              sharedStore.unlockAchievement('first_deal');
+              if (result.payout >= 500) sharedStore.unlockAchievement('big_win');
+            } else {
+              andarBaharAudio.playCardFlip();
+            }
+
+            set({
+              gameState: 'round_settled',
+              currentStepIndex: totalSteps,
+              recentResults: updatedRecent,
+              firstSideNotice: null,
+            });
+            activeDealTimer = null;
+            return;
           }
 
-          if (result.won && result.payout) {
-            sharedStore.addBalance(result.payout);
-            andarBaharAudio.playWinChime();
-            sharedStore.unlockAchievement('first_deal');
-            if (result.payout >= 500) sharedStore.unlockAchievement('big_win');
-          } else {
-            andarBaharAudio.playCardFlip();
-          }
+          const step = result.dealtCards[currentIdx];
+          andarBaharAudio.playCardSlide();
 
-          set({
-            gameState: 'round_settled',
-            currentStepIndex: totalSteps,
-            recentResults: updatedRecent,
-            firstSideNotice: null,
+          set((state) => {
+            const nextAndar = step.side === 'ANDAR' ? [...state.andarCards, step.card] : state.andarCards;
+            const nextBahar = step.side === 'BAHAR' ? [...state.baharCards, step.card] : state.baharCards;
+            return {
+              andarCards: nextAndar,
+              baharCards: nextBahar,
+              currentStepIndex: currentIdx + 1,
+            };
           });
-          return;
+
+          currentIdx++;
+
+          // Snappy deal speed: 220ms initially, accelerating to 140ms for longer runs
+          const delay = currentIdx > 6 ? 140 : 220;
+          activeDealTimer = setTimeout(dealNextCard, delay);
+        } catch (err) {
+          console.error('Error during card deal:', err);
+          set({ gameState: 'idle', firstSideNotice: null });
+          activeDealTimer = null;
         }
-
-        const step = result.dealtCards[currentIdx];
-        andarBaharAudio.playCardSlide();
-
-        set((state) => {
-          const nextAndar = step.side === 'ANDAR' ? [...state.andarCards, step.card] : state.andarCards;
-          const nextBahar = step.side === 'BAHAR' ? [...state.baharCards, step.card] : state.baharCards;
-          return {
-            andarCards: nextAndar,
-            baharCards: nextBahar,
-            currentStepIndex: currentIdx + 1,
-          };
-        });
-
-        currentIdx++;
-
-        // Deal speed: 320ms for first 10 cards, accelerating to 180ms for long runs
-        const delay = currentIdx > 10 ? 180 : 320;
-        setTimeout(dealNextCard, delay);
       };
 
-      // Start after opening card flip & toast
-      setTimeout(dealNextCard, 800);
+      // Snappy start after opening card reveal (240ms instead of 800ms)
+      activeDealTimer = setTimeout(dealNextCard, 240);
     },
 
     resetRound: () => {
+      if (activeDealTimer) {
+        clearTimeout(activeDealTimer);
+        activeDealTimer = null;
+      }
       set({
         gameState: 'idle',
         openingCard: null,

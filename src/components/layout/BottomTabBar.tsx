@@ -201,8 +201,12 @@ export function BottomTabBar() {
   if (pathname === '/login' || pathname === '/intro' || pathname.startsWith('/admin')) return null;
   if (pathname === '/' && !isAuth) return null;
 
-  // Active Index: 0 = Sports/Cricket, 1 = Casino (or Roulette), 2 = Profile
-  const activeIndex = showProfileModal ? 2 : (pathname.startsWith('/casino') || pathname.startsWith('/roulette')) ? 1 : 0;
+  // Active Index: 0 = Sports/Cricket, 1 = Casino (or Roulette, Andar Bahar), 2 = Profile
+  const activeIndex = showProfileModal
+    ? 2
+    : (pathname.startsWith('/casino') || pathname.startsWith('/roulette') || pathname.startsWith('/andar-bahar'))
+    ? 1
+    : 0;
 
   // Compute "how many times coins in his account has added"
   const coinAdditions = transactions.filter((t) => t.amount > 0);
@@ -244,15 +248,14 @@ export function BottomTabBar() {
       {/* Authentic Limelight Navigation Bar with Cricket, Casino, and Profile */}
       <div
         aria-label="Bottom Navigation"
-        className="lg:hidden fixed bottom-4 left-0 right-0 z-40 flex justify-center items-center pointer-events-none px-4 pb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-4 left-0 right-0 z-40 flex justify-center items-center pointer-events-none px-4 pb-[env(safe-area-inset-bottom)]"
       >
         <div className="pointer-events-auto">
           <LimelightNav
             items={navItems}
             activeIndex={activeIndex}
-            className="w-[330px] max-w-[92vw] h-16 rounded-2xl bg-surface/95 dark:bg-card/95 backdrop-blur-2xl border-2 border-surface-border shadow-2xl shadow-black/50 justify-around px-2"
+            className="w-[320px] max-w-[92vw] h-16 justify-around px-2"
             iconContainerClassName="flex-1"
-            limelightClassName="bg-brand-600 shadow-[0_0_20px_var(--brand-600)]"
           />
         </div>
       </div>

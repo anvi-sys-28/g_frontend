@@ -92,22 +92,47 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
   // Step 3: Main Gaming Area (Cricket Live Scores with Device Backgrounds & Navigation Bar)
   return (
     <div className="relative min-h-screen">
-      {/* Background Images: mbc.webp for mobile (< 768px), pbc.webp for desktop (>= 768px) */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {/* 100% Fixed, Motionless Background Layer */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100lvh',
+          transform: 'translate3d(0, 0, 0)',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+        }}
+      >
         {/* Mobile Cricket Background (< 768px): mbc.webp */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/mbc.webp"
-          alt="Cricket Mobile Background"
-          className="absolute inset-0 w-full h-full object-cover object-center md:hidden"
+          alt=""
+          className="w-full h-full object-cover object-center md:hidden pointer-events-none select-none"
+          style={{
+            transform: 'translate3d(0, 0, 0)',
+            WebkitTransform: 'translate3d(0, 0, 0)',
+          }}
         />
 
         {/* Desktop / Computer Cricket Background (>= 768px): pbc.webp */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/pbc.webp"
-          alt="Cricket Desktop Background"
-          className="absolute inset-0 w-full h-full object-cover object-center hidden md:block"
+          alt=""
+          className="w-full h-full object-cover object-center hidden md:block pointer-events-none select-none"
+          style={{
+            transform: 'translate3d(0, 0, 0)',
+            WebkitTransform: 'translate3d(0, 0, 0)',
+          }}
         />
 
         {/* Atmospheric Dark Gradient Overlays - Softened so stadium background is clearly visible */}

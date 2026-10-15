@@ -45,12 +45,16 @@ export function SmoothVideoCard({
     [framesDir]
   );
 
-  // Preload initial buffer of frames on mount for instant zero-lag playback
+  // Preload initial buffer of frames on desktop mount for instant zero-lag playback
   useEffect(() => {
     let isCancelled = false;
 
+    // Skip heavy frame buffering on mobile/touch devices
+    const isTouchOnly = typeof window !== 'undefined' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (isTouchOnly) return;
+
     const preloadBuffer = () => {
-      for (let i = 1; i <= 40; i++) {
+      for (let i = 1; i <= 30; i++) {
         if (isCancelled) break;
         if (!imagesCache.current.has(i)) {
           const img = new window.Image();
@@ -173,9 +177,12 @@ export function SmoothVideoCard({
       className="w-full rounded-3xl overflow-hidden p-0 shadow-2xl bg-neutral-950"
     >
       <div
-        onMouseEnter={() => setIsHovered(true)}
+        onMouseEnter={() => {
+          if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            setIsHovered(true);
+          }
+        }}
         onMouseLeave={() => setIsHovered(false)}
-        onTouchStart={() => setIsHovered((prev) => !prev)}
         onClick={onPlayClick}
         className={`group relative overflow-hidden rounded-3xl bg-neutral-950 transition-all duration-300 cursor-pointer w-full h-full ${
           isHovered ? 'scale-[1.01]' : ''

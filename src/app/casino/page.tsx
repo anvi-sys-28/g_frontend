@@ -248,22 +248,47 @@ export default function CasinoPage() {
 
   return (
     <div className="relative min-h-screen pb-16">
-      {/* Background Images: mcb.webp for mobile, pcb.webp for desktop */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {/* 100% Fixed, Motionless Background Layer */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100lvh',
+          transform: 'translate3d(0, 0, 0)',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+        }}
+      >
         {/* Mobile Casino Background (< 768px): mcb.webp */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/mcb.webp"
-          alt="Casino Mobile Background"
-          className="absolute inset-0 w-full h-full object-cover object-center md:hidden"
+          alt=""
+          className="w-full h-full object-cover object-center md:hidden pointer-events-none select-none"
+          style={{
+            transform: 'translate3d(0, 0, 0)',
+            WebkitTransform: 'translate3d(0, 0, 0)',
+          }}
         />
 
         {/* Desktop / Computer Casino Background (>= 768px): pcb.webp */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/pcb.webp"
-          alt="Casino Desktop Background"
-          className="absolute inset-0 w-full h-full object-cover object-center hidden md:block"
+          alt=""
+          className="w-full h-full object-cover object-center hidden md:block pointer-events-none select-none"
+          style={{
+            transform: 'translate3d(0, 0, 0)',
+            WebkitTransform: 'translate3d(0, 0, 0)',
+          }}
         />
 
         {/* Ambient Dark Gradient Overlays for Maximum Contrast & Depth */}
@@ -273,7 +298,7 @@ export default function CasinoPage() {
 
       <div className="relative z-10 max-w-[1240px] mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Top Lounge Bar: User Balance & Action Shortcuts */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/80 border border-amber-500/35 backdrop-blur-2xl shadow-2xl ring-1 ring-amber-400/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-3xl bg-neutral-950/95 border border-amber-500/35 shadow-2xl ring-1 ring-amber-400/20">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-600/90 text-white font-bold text-xs uppercase tracking-wide shadow-sm">

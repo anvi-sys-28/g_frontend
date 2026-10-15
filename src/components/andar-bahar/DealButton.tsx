@@ -33,7 +33,7 @@ export function DealButton() {
   const hasInsufficientBalance = balance < selectedChip;
 
   return (
-    <div className="relative w-full max-w-[430px] mx-auto px-3 py-2 select-none">
+    <div className="relative w-full max-w-[430px] mx-auto px-3 pt-2 pb-24 sm:pb-3 select-none">
       <button
         type="button"
         disabled={isDealing || hasInsufficientBalance}

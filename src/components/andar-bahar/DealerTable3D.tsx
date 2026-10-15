@@ -490,6 +490,19 @@ export function DealerTable3D() {
 
     // Update center opening card texture when openingCard changes
     let lastRenderedCardId = '';
+    let currentDynamicTex: THREE.CanvasTexture | null = null;
+
+    // Card dealing flight physics
+    let prevTotalCards = 0;
+    let prevAndarCount = 0;
+    let isCardFlicking = false;
+    let flickStartTime = 0;
+    const FLICK_DURATION = 180;
+    const shoePos = new THREE.Vector3(2.6, 0.42, -0.45);
+    const andarPos = new THREE.Vector3(-1.6, 0.12, 0.1);
+    const baharPos = new THREE.Vector3(1.6, 0.12, 0.1);
+    const startPos = shoePos.clone();
+    const targetPos = andarPos.clone();
 
     // --- ANIMATION RAF LOOP ---
     let animationFrameId: number;
@@ -501,18 +514,54 @@ export function DealerTable3D() {
       const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
       lastTime = currentTime;
 
-      const { gameState, openingCard } = stateRef.current;
+      const { gameState, openingCard, andarCount, baharCount } = stateRef.current;
 
       // Update Center Opening Card
       if (openingCard && openingCard.id !== lastRenderedCardId) {
         lastRenderedCardId = openingCard.id;
-        const newTex = createCardTexture(openingCard, false);
-        cardMaterials[2].map = newTex;
+        if (currentDynamicTex) currentDynamicTex.dispose();
+        currentDynamicTex = createCardTexture(openingCard, false);
+        cardMaterials[2].map = currentDynamicTex;
         cardMaterials[2].needsUpdate = true;
       } else if (!openingCard && lastRenderedCardId !== '') {
         lastRenderedCardId = '';
+        if (currentDynamicTex) {
+          currentDynamicTex.dispose();
+          currentDynamicTex = null;
+        }
         cardMaterials[2].map = jokerCardTex;
         cardMaterials[2].needsUpdate = true;
+      }
+
+      // 3D Card Flick Detection
+      const currentTotal = andarCount + baharCount;
+      if (currentTotal > prevTotalCards && gameState === 'dealing') {
+        isCardFlicking = true;
+        flickStartTime = currentTime;
+        startPos.copy(shoePos);
+        targetPos.copy(andarCount > prevAndarCount ? andarPos : baharPos);
+        dealCardMesh.visible = true;
+      }
+      prevTotalCards = currentTotal;
+      prevAndarCount = andarCount;
+
+      if (isCardFlicking) {
+        const elapsed = currentTime - flickStartTime;
+        const progress = Math.min(elapsed / FLICK_DURATION, 1.0);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        dealCardMesh.position.lerpVectors(startPos, targetPos, ease);
+        dealCardMesh.position.y += Math.sin(progress * Math.PI) * 0.35;
+        dealCardMesh.rotation.y = (1 - ease) * -0.6 + ease * 0.1;
+        dealCardMesh.rotation.x = 0.2 * (1 - ease);
+
+        if (progress >= 1.0) {
+          isCardFlicking = false;
+          dealCardMesh.visible = false;
+        }
+      } else if (gameState !== 'dealing') {
+        dealCardMesh.visible = false;
+        prevTotalCards = 0;
+        prevAndarCount = 0;
       }
 
       // Gentle table breathing motion
@@ -528,6 +577,7 @@ export function DealerTable3D() {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w <= 0 || h <= 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -541,6 +591,7 @@ export function DealerTable3D() {
       tableFeltTexture.dispose();
       jokerCardTex.dispose();
       cardBackTex.dispose();
+      if (currentDynamicTex) currentDynamicTex.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
@@ -553,7 +604,7 @@ export function DealerTable3D() {
   return (
     <div className="relative w-full h-full overflow-hidden select-none">
       {/* 3D WebGL Canvas */}
-      <div ref={containerRef} className="relative z-10 w-full h-full" />
+      <div ref={containerRef} className="relative z-10 w-full h-full pointer-events-none" />
 
       {/* Floating Hero Stats Button (Top Right) */}
       <button

@@ -238,7 +238,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
   return (
     <div className="w-full text-white">
       {/* 1. TOP HEADER BAR: Golden Spade Emblem + LiveCricket | Search Pill | Logout Icon */}
-      <header className="sticky top-0 z-30 bg-[#0c0d12]/95 backdrop-blur-xl border-b border-amber-500/20 px-3 sm:px-6 py-2.5 transition-all">
+      <header className="sticky top-0 z-30 bg-[#0c0d12] border-b border-amber-500/20 px-3 sm:px-6 py-2.5 transition-all shadow-md">
         <div className="max-w-[1100px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Golden Spade Logo + LiveCricket */}
           <Link href="/" className="shrink-0 flex items-center">
@@ -271,7 +271,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
 
       {/* Notice displayed when API key quota is exhausted across all three keys */}
       {(meta.isAllKeysExhausted || (isDataOld && !isMock)) && (
-        <div className="bg-amber-950/90 border-b border-amber-500/40 text-amber-200 px-4 py-2.5 text-center text-xs font-semibold backdrop-blur-md flex items-center justify-center gap-2 shadow-sm">
+        <div className="bg-amber-950 border-b border-amber-500/40 text-amber-200 px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 shadow-sm">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <span>⚠️ Limit over from all three keys.</span>
           <span className="text-amber-400/80 text-[11px] font-normal">
@@ -281,7 +281,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
       )}
 
       {/* 2. SUB-HEADER TABS ROW: Top Matches | Live 1 | Upcoming 0 | ⭐ Favourites | 📅 Schedule > */}
-      <div className="sticky top-[53px] z-20 bg-[#0e0f14]/95 backdrop-blur-xl border-b border-amber-500/15 shadow-sm">
+      <div className="sticky top-[53px] z-20 bg-[#0e0f14] border-b border-amber-500/15 shadow-sm">
         <div className="max-w-[1100px] mx-auto px-4 flex items-center justify-between overflow-x-auto no-scrollbar gap-4 text-xs font-semibold py-2">
           <div className="flex items-center gap-5 sm:gap-6 shrink-0">
             {/* Top Matches Tab */}

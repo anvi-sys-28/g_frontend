@@ -327,6 +327,7 @@ export function RouletteWheel3D() {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w <= 0 || h <= 0) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -336,6 +337,7 @@ export function RouletteWheel3D() {
     // --- ANIMATION RAF LOOP (60-120 FPS) ---
     let animationFrameId: number;
     let lastTime = performance.now();
+    let spinHasCompleted = false;
 
     const animate = (currentTime: number) => {
       animationFrameId = requestAnimationFrame(animate);
@@ -350,6 +352,7 @@ export function RouletteWheel3D() {
         if (!isSpinningActive) {
           // --- LAUNCH NEW SPIN: SETUP DETERMINISTIC TRAJECTORY ---
           isSpinningActive = true;
+          spinHasCompleted = false;
           spinStartTimestamp = currentTime;
           spinDuration = duration;
           wheelStartAngle = currentWheelAngle;
@@ -375,66 +378,87 @@ export function RouletteWheel3D() {
         const elapsed = (currentTime - spinStartTimestamp) / 1000;
         const p = Math.min(elapsed / spinDuration, 1.0);
 
-        // Smooth cubic ease-out for wheel
-        const wheelEase = 1 - Math.pow(1 - p, 3);
-        currentWheelAngle = wheelStartAngle + wheelTotalDelta * wheelEase;
-        rotorGroup.rotation.y = currentWheelAngle;
+        if (p >= 1.0) {
+          // --- PINPOINT SETTLEMENT IN WINNING POCKET (NO RE-ENTRY JITTER) ---
+          const finalWheelAngle = wheelStartAngle + wheelTotalDelta;
+          currentWheelAngle = finalWheelAngle;
+          rotorGroup.rotation.y = currentWheelAngle;
 
-        // Smooth continuous deceleration for ball:
-        // E(p) = 1 - (1 - p)^2.6
-        // Derivative starts high and smoothly decelerates to 0 at p=1
-        const ballEase = 1 - Math.pow(1 - p, 2.6);
-        currentBallAngle = ballStartAngle + ballTotalTravel * ballEase;
+          const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
+          currentBallAngle = finalWheelAngle + targetLocalAngle;
+          ballRadius = 2.38;
+          ballHeight = -0.20;
 
-        // Ball Radius and Height Phases:
-        if (p < 0.60) {
-          // Phase 1: High outer track orbit
-          ballRadius = 3.32;
-          ballHeight = 0.04;
-        } else if (p < 0.84) {
-          // Phase 2: Smooth spiral drop into pocket ring
-          const u = (p - 0.60) / 0.24;
-          const smooth = u * u * (3 - 2 * u); // smoothstep
-          ballRadius = 3.32 - smooth * (3.32 - 2.38);
-          ballHeight = 0.04 - smooth * (0.04 - (-0.20));
+          ballMesh.position.set(
+            Math.cos(currentBallAngle) * ballRadius,
+            ballHeight,
+            Math.sin(currentBallAngle) * ballRadius
+          );
 
-          if (currentTime - lastBounceTime > 180) {
-            soundEffects.playBallBounceSound(0.5 * (1 - u));
-            lastBounceTime = currentTime;
+          camera.position.copy(zoomedCamPos);
+          camera.lookAt(0, -0.35, 0);
+
+          if (!spinHasCompleted) {
+            spinHasCompleted = true;
+            onSpinComplete();
           }
         } else {
-          // Phase 3: Settling micro-bounces inside the winning pocket bed
-          ballRadius = 2.38;
-          const v = (p - 0.84) / 0.16;
-          const bounce = Math.abs(Math.sin(v * Math.PI * 3)) * Math.pow(1 - v, 1.8) * 0.07;
-          ballHeight = -0.20 + bounce;
+          // Smooth cubic ease-out for wheel
+          const wheelEase = 1 - Math.pow(1 - p, 3);
+          currentWheelAngle = wheelStartAngle + wheelTotalDelta * wheelEase;
+          rotorGroup.rotation.y = currentWheelAngle;
 
-          if (v > 0.1 && currentTime - lastBounceTime > 120 && bounce > 0.01) {
-            soundEffects.playBallBounceSound(bounce * 12);
-            lastBounceTime = currentTime;
+          // Smooth continuous deceleration for ball:
+          // E(p) = 1 - (1 - p)^2.6
+          // Derivative starts high and smoothly decelerates to 0 at p=1
+          const ballEase = 1 - Math.pow(1 - p, 2.6);
+          currentBallAngle = ballStartAngle + ballTotalTravel * ballEase;
+
+          // Ball Radius and Height Phases:
+          if (p < 0.60) {
+            // Phase 1: High outer track orbit
+            ballRadius = 3.32;
+            ballHeight = 0.04;
+          } else if (p < 0.84) {
+            // Phase 2: Smooth spiral drop into pocket ring
+            const u = (p - 0.60) / 0.24;
+            const smooth = u * u * (3 - 2 * u); // smoothstep
+            ballRadius = 3.32 - smooth * (3.32 - 2.38);
+            ballHeight = 0.04 - smooth * (0.04 - (-0.20));
+
+            if (currentTime - lastBounceTime > 180) {
+              soundEffects.playBallBounceSound(0.5 * (1 - u));
+              lastBounceTime = currentTime;
+            }
+          } else {
+            // Phase 3: Settling micro-bounces inside the winning pocket bed
+            ballRadius = 2.38;
+            const v = (p - 0.84) / 0.16;
+            const bounce = Math.abs(Math.sin(v * Math.PI * 3)) * Math.pow(1 - v, 1.8) * 0.07;
+            ballHeight = -0.20 + bounce;
+
+            if (v > 0.1 && currentTime - lastBounceTime > 120 && bounce > 0.01) {
+              soundEffects.playBallBounceSound(bounce * 12);
+              lastBounceTime = currentTime;
+            }
           }
-        }
 
-        // Update 3D ball position
-        ballMesh.position.set(
-          Math.cos(currentBallAngle) * ballRadius,
-          ballHeight,
-          Math.sin(currentBallAngle) * ballRadius
-        );
+          // Update 3D ball position
+          ballMesh.position.set(
+            Math.cos(currentBallAngle) * ballRadius,
+            ballHeight,
+            Math.sin(currentBallAngle) * ballRadius
+          );
 
-        // Camera push-in effect
-        const camProgress = Math.sin(p * Math.PI * 0.5);
-        camera.position.lerpVectors(initialCamPos, zoomedCamPos, camProgress);
-        camera.lookAt(0, -0.35, 0);
-
-        // Spin complete
-        if (p >= 1.0) {
-          isSpinningActive = false;
-          onSpinComplete();
+          // Camera push-in effect
+          const camProgress = Math.sin(p * Math.PI * 0.5);
+          camera.position.lerpVectors(initialCamPos, zoomedCamPos, camProgress);
+          camera.lookAt(0, -0.35, 0);
         }
       } else {
-        // --- IDLE STATE: GENTLE, CONTINUOUS WHEEL DRIFT (NO JITTER) ---
+        // --- IDLE / SETTLED STATE: GENTLE CONTINUOUS WHEEL ROTATION ---
         isSpinningActive = false;
+        spinHasCompleted = false;
         currentWheelAngle -= 0.15 * dt;
         rotorGroup.rotation.y = currentWheelAngle;
 

@@ -51,7 +51,7 @@ export type LimelightNavProps = {
 };
 
 /**
- * An adaptive-width navigation bar with a "limelight" effect that highlights the active item.
+ * An adaptive-width navigation bar with a "limelight" effect matching the user screenshot.
  */
 export const LimelightNav = ({
   items = defaultNavItems,
@@ -98,7 +98,7 @@ export const LimelightNav = ({
   };
 
   return (
-    <nav className={`relative inline-flex items-center h-16 rounded-lg bg-card text-foreground border px-2 ${className}`}>
+    <nav className={`relative inline-flex items-center h-16 rounded-2xl bg-white text-neutral-900 border border-neutral-200/90 shadow-[0_12px_40px_rgba(0,0,0,0.14)] px-2 ${className}`}>
       {items.map(({ id, icon, label, onClick }, index) => (
         <a
           key={id}
@@ -110,21 +110,24 @@ export const LimelightNav = ({
           aria-label={label}
         >
           {cloneElement(icon, {
-            className: `w-6 h-6 transition-opacity duration-100 ease-in-out ${
-              activeIndex === index ? 'opacity-100' : 'opacity-40'
+            className: `w-7 h-7 transition-colors duration-200 ${
+              activeIndex === index ? 'text-black opacity-100' : 'text-neutral-400 opacity-60 hover:opacity-90'
             } ${icon.props?.className || ''} ${iconClassName || ''}`,
           })}
         </a>
       ))}
 
+      {/* Red Limelight Top Pill & Spotlight Glow matching reference */}
       <div 
         ref={limelightRef}
-        className={`absolute top-0 z-10 w-11 h-[5px] rounded-full bg-primary shadow-[0_50px_15px_var(--primary)] ${
-          isReady ? 'transition-[left] duration-400 ease-in-out' : ''
+        className={`absolute top-0 z-10 w-9 sm:w-10 h-[4px] rounded-full bg-[#E11D48] shadow-[0_2px_8px_rgba(225,29,72,0.6)] ${
+          isReady ? 'transition-[left] duration-300 ease-out' : ''
         } ${limelightClassName}`}
         style={{ left: '-999px' }}
       >
-        <div className="absolute left-[-30%] top-[5px] w-[160%] h-14 [clip-path:polygon(5%_100%,25%_0,75%_0,95%_100%)] bg-gradient-to-b from-primary/30 to-transparent pointer-events-none" />
+        {/* Soft diffused red spotlight glow underneath the active icon */}
+        <div className="absolute left-[-40%] top-[4px] w-[180%] h-14 bg-gradient-to-b from-[#E11D48]/25 via-[#E11D48]/10 to-transparent [clip-path:polygon(10%_100%,25%_0,75%_0,90%_100%)] pointer-events-none blur-[1px]" />
+        <div className="absolute left-[-20%] top-[22px] w-[140%] h-7 bg-[#E11D48]/20 rounded-full blur-md pointer-events-none" />
       </div>
     </nav>
   );

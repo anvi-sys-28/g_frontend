@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FastForward, Play, ShieldCheck, Sparkles } from 'lucide-react';
+import { FastForward, Play, ShieldCheck, Sparkles, Volume2, VolumeX } from 'lucide-react';
 
 interface IntroVideoPlayerProps {
   onFinish?: () => void;
@@ -17,8 +17,10 @@ export function IntroVideoPlayer({
   const [currentFrameNum, setCurrentFrameNum] = useState(1);
   const [isStarted, setIsStarted] = useState(false);
   const [hasEnded, setHasEnded] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const animFrameId = useRef<number | null>(null);
   const lastFrameTime = useRef<number>(0);
   const currentFrameIndex = useRef<number>(1);
@@ -29,9 +31,20 @@ export function IntroVideoPlayer({
     return `/in/frame_${padded}.webp`;
   }, []);
 
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch {}
+    }
+  }, []);
+
   const handleFinish = useCallback(() => {
     if (hasEnded) return;
     setHasEnded(true);
+
+    stopAudio();
 
     if (animFrameId.current) {
       cancelAnimationFrame(animFrameId.current);
@@ -47,9 +60,10 @@ export function IntroVideoPlayer({
     } else {
       router.push('/login');
     }
-  }, [hasEnded, onFinish, router]);
+  }, [hasEnded, onFinish, router, stopAudio]);
 
   const handleSkipToApp = () => {
+    stopAudio();
     try {
       sessionStorage.setItem('playin_intro_seen', 'true');
       localStorage.setItem('playin_auth', 'true');
@@ -168,10 +182,65 @@ export function IntroVideoPlayer({
     };
   }, [isStarted, hasEnded, renderLoop]);
 
+  // Audio playback lifecycle and gesture unlock
+  useEffect(() => {
+    if (!isStarted || hasEnded) return;
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.muted = isMuted;
+      audio.play().catch(() => {
+        // Autoplay may be restricted until first user gesture
+      });
+    }
+
+    const handleFirstGesture = () => {
+      if (audioRef.current && audioRef.current.paused && !hasEnded) {
+        audioRef.current.play().catch(() => {});
+      }
+    };
+
+    window.addEventListener('pointerdown', handleFirstGesture, { once: true });
+    window.addEventListener('click', handleFirstGesture, { once: true });
+    window.addEventListener('touchstart', handleFirstGesture, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', handleFirstGesture);
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('touchstart', handleFirstGesture);
+    };
+  }, [isStarted, hasEnded, isMuted]);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      stopAudio();
+    };
+  }, [stopAudio]);
+
+  const toggleMute = () => {
+    if (audioRef.current) {
+      const nextMuted = !isMuted;
+      audioRef.current.muted = nextMuted;
+      if (!nextMuted && audioRef.current.paused && !hasEnded) {
+        audioRef.current.play().catch(() => {});
+      }
+      setIsMuted(nextMuted);
+    }
+  };
+
   const progressPercent = Math.min(100, Math.round((currentFrameNum / totalFrames) * 100));
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black flex items-center justify-center select-none">
+      {/* Background Audio Soundtrack */}
+      <audio
+        ref={audioRef}
+        src="/m.mp3"
+        preload="auto"
+        playsInline
+      />
+
       {/* 60 FPS Video Canvas */}
       <canvas
         ref={canvasRef}
@@ -188,6 +257,20 @@ export function IntroVideoPlayer({
 
         {/* Right Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* Sound Mute/Unmute Toggle */}
+          <button
+            type="button"
+            onClick={toggleMute}
+            aria-label={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 active:scale-95 backdrop-blur-md border border-white/20 text-white transition-all shadow-lg"
+          >
+            {isMuted ? (
+              <VolumeX className="w-4 h-4 text-red-400" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-[#f5d27a]" />
+            )}
+          </button>
+
           {/* Skip Intro to Login */}
           <button
             type="button"

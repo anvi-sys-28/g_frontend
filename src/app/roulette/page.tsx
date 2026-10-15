@@ -176,7 +176,7 @@ export default function RoulettePage() {
       </div>
 
       {/* Controls: Chip Selector, Action Bar & Recent Results */}
-      <div className="shrink-0 space-y-1 pb-1 bg-gradient-to-t from-black via-black/95 to-transparent">
+      <div className="shrink-0 space-y-1 pb-24 sm:pb-2 bg-gradient-to-t from-black via-black/95 to-transparent">
         {/* Chip Selector Row */}
         <ChipSelector />
 

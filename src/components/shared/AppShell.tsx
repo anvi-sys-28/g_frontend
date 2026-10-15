@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { GameBottomTabs } from './GameBottomTabs';
 import { AccountModal } from './AccountModal';
 
 interface AppShellProps {
@@ -27,9 +26,6 @@ export function AppShell({ children, sideColumn }: AppShellProps) {
           <div className="flex-1 flex flex-col justify-between overflow-hidden relative">
             {children}
           </div>
-
-          {/* Shared Bottom Tab Bar */}
-          <GameBottomTabs />
         </div>
 
         {/* Optional Desktop Side Column (Probability Playground & Mathematics) */}
