@@ -99,11 +99,11 @@ export default function LoginPage() {
       <div className="fixed inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none md:hidden" />
       <div className="fixed inset-0 bg-radial-gradient from-transparent via-black/20 to-black/60 pointer-events-none" />
 
-      {/* Mobile Top Visual Area: Displays model & casino chips cleanly at top of screen */}
-      <div className="w-full h-[38vh] min-h-[260px] max-h-[380px] shrink-0 pointer-events-none lg:hidden" />
+      {/* Mobile Top Visual Area: Displays model & casino chips cleanly at top of screen, moved down 10% */}
+      <div className="w-full h-[48vh] min-h-[340px] max-h-[480px] shrink-0 pointer-events-none lg:hidden" />
 
       {/* Main Container: Mobile flows smoothly with plenty of bottom padding for scroll; Desktop balanced */}
-      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pt-1 sm:pt-6 pb-28 sm:pb-12 flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8 flex-1">
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pt-1 sm:pt-6 pb-32 sm:pb-12 flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8 flex-1">
         {/* Left Side: Spacious graphic area showing the seated model & gold coins */}
         <div className="hidden lg:flex flex-1 flex-col justify-end pb-12 pointer-events-none">
           {/* Subtle branding watermark on bottom-left */}
