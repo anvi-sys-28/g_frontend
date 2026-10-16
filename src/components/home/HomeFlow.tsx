@@ -53,6 +53,21 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
     };
   }, []);
 
+  // Sync currentStep with DOM & components so navigation bars are hidden on intro/login
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.screen = currentStep;
+      document.documentElement.dataset.homeStep = currentStep;
+    }
+    window.dispatchEvent(new CustomEvent('playin_homestep_changed', { detail: currentStep }));
+    return () => {
+      if (typeof document !== 'undefined') {
+        delete document.documentElement.dataset.screen;
+        delete document.documentElement.dataset.homeStep;
+      }
+    };
+  }, [currentStep]);
+
   // Step 1 -> Step 2: When 60 FPS Intro Finishes or is Skipped
   const handleIntroFinish = () => {
     try {
@@ -83,7 +98,7 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
   // Step 2: Login Interface with ID, Password, Player Demo Preset, and Skip Login
   if (currentStep === 'login') {
     return (
-      <div className="fixed inset-0 z-50 bg-black overflow-y-auto">
+      <div className="fixed inset-0 z-50 bg-black overflow-y-auto overscroll-contain">
         <LoginPage />
       </div>
     );

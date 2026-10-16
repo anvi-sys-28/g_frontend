@@ -13,7 +13,7 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
       try {
         setIsAuth(Boolean(localStorage.getItem('playin_auth') && sessionStorage.getItem('playin_session_active')));
       } catch {
-        setIsAuth(true);
+        setIsAuth(false);
       }
     };
     check();
@@ -25,9 +25,9 @@ export function AppLayoutShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const isIntroPage = pathname === '/intro';
-  const isLoginPage = pathname === '/login';
-  const isAdminPage = pathname.startsWith('/admin');
+  const isIntroPage = pathname?.startsWith('/intro');
+  const isLoginPage = pathname?.startsWith('/login');
+  const isAdminPage = pathname?.startsWith('/admin');
   const isUnauthRoot = pathname === '/' && !isAuth;
   const isFullScreenPage = isIntroPage || isLoginPage || isAdminPage || isUnauthRoot;
 

@@ -73,6 +73,21 @@ export function BottomTabBar() {
   const [showRequestInput, setShowRequestInput] = useState(false);
   const [requestAmount, setRequestAmount] = useState('1000');
   const [requestStatusMsg, setRequestStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [screenStep, setScreenStep] = useState<string>('');
+
+  useEffect(() => {
+    const handleStep = () => {
+      if (typeof document !== 'undefined') {
+        const step = document.documentElement.dataset.screen || document.documentElement.dataset.homeStep || '';
+        setScreenStep(step);
+      }
+    };
+    handleStep();
+    window.addEventListener('playin_homestep_changed', handleStep);
+    return () => {
+      window.removeEventListener('playin_homestep_changed', handleStep);
+    };
+  }, []);
 
   useEffect(() => {
     const check = () => {
@@ -86,7 +101,7 @@ export function BottomTabBar() {
         const storedCoins = localStorage.getItem('playin_user_coins');
         if (storedCoins) setCoins(parseInt(storedCoins, 10));
       } catch {
-        setIsAuth(true);
+        setIsAuth(false);
       }
     };
     check();
@@ -198,8 +213,15 @@ export function BottomTabBar() {
   };
 
   // Hide mobile bottom tab bar on full-screen login, intro, admin portal, or on root before login
-  if (pathname === '/login' || pathname === '/intro' || pathname.startsWith('/admin')) return null;
-  if (pathname === '/' && !isAuth) return null;
+  if (!pathname || pathname.startsWith('/login') || pathname.startsWith('/intro') || pathname.startsWith('/admin')) {
+    return null;
+  }
+  if (screenStep === 'login' || screenStep === 'intro') {
+    return null;
+  }
+  if (pathname === '/' && !isAuth) {
+    return null;
+  }
 
   // Active Index: 0 = Sports/Cricket, 1 = Casino (or Roulette, Andar Bahar), 2 = Profile
   const activeIndex = showProfileModal

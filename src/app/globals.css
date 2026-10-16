@@ -93,3 +93,13 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Ensure mobile bottom navigation bar is strictly hidden on login and intro screens */
+html[data-screen="login"] [aria-label="Bottom Navigation"],
+html[data-screen="intro"] [aria-label="Bottom Navigation"],
+html[data-home-step="login"] [aria-label="Bottom Navigation"],
+html[data-home-step="intro"] [aria-label="Bottom Navigation"] {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}

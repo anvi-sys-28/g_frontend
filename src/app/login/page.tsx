@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlayinExchangeLogo } from '@/components/brand/PlayinExchangeLogo';
 import { User, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
@@ -65,14 +65,25 @@ export default function LoginPage() {
     }
   };
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.screen = 'login';
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        delete document.documentElement.dataset.screen;
+      }
+    };
+  }, []);
+
   return (
-    <div className="relative min-h-[100dvh] w-full flex items-end lg:items-center justify-center lg:justify-end overflow-hidden bg-black select-none">
+    <div className="relative min-h-[100dvh] w-full flex flex-col justify-between overflow-x-hidden overflow-y-auto bg-black select-none">
       {/* Mobile Background (< 768px): ml.webp */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/ml.webp"
         alt="Playin Exchange Mobile Background"
-        className="absolute inset-0 w-full h-full object-cover object-top pointer-events-none md:hidden"
+        className="fixed inset-0 w-full h-full object-cover object-top pointer-events-none md:hidden"
       />
 
       {/* Desktop Background (>= 768px): lb.webp */}
@@ -80,16 +91,19 @@ export default function LoginPage() {
       <img
         src="/lb.webp"
         alt="Playin Exchange Desktop Background"
-        className="absolute inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none hidden md:block"
+        className="fixed inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none hidden md:block"
       />
 
       {/* Ambient Vignette Overlays: Subtle on mobile so luxury background artwork is clearly visible */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/30 to-black/80 pointer-events-none hidden md:block" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none md:hidden" />
-      <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/20 to-black/60 pointer-events-none" />
+      <div className="fixed inset-0 bg-gradient-to-r from-black/40 via-black/30 to-black/80 pointer-events-none hidden md:block" />
+      <div className="fixed inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none md:hidden" />
+      <div className="fixed inset-0 bg-radial-gradient from-transparent via-black/20 to-black/60 pointer-events-none" />
 
-      {/* Main Container: Mobile sits elegantly at the bottom leaving model visible, Desktop balanced */}
-      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pt-6 pb-5 sm:pb-8 flex flex-col lg:flex-row items-center justify-end lg:justify-between gap-6 min-h-[100dvh]">
+      {/* Mobile Top Visual Area: Displays model & casino chips cleanly at top of screen */}
+      <div className="w-full h-[18vh] min-h-[100px] max-h-[220px] shrink-0 pointer-events-none lg:hidden" />
+
+      {/* Main Container: Mobile flows smoothly with plenty of bottom padding for scroll; Desktop balanced */}
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pt-1 sm:pt-6 pb-28 sm:pb-12 flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8 flex-1">
         {/* Left Side: Spacious graphic area showing the seated model & gold coins */}
         <div className="hidden lg:flex flex-1 flex-col justify-end pb-12 pointer-events-none">
           {/* Subtle branding watermark on bottom-left */}
@@ -104,13 +118,13 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side: Sleek, Compact Glassmorphism Login Interface */}
-        <div className="w-full max-w-[330px] sm:max-w-[370px] lg:max-w-[410px] shrink-0 mb-1 sm:mb-0">
-          <div className="relative rounded-2xl sm:rounded-3xl bg-black/65 sm:bg-neutral-950/75 border border-amber-500/30 backdrop-blur-xl p-4 sm:p-6 lg:p-7 shadow-2xl shadow-black/90 ring-1 ring-amber-400/20">
+        <div className="w-full max-w-[340px] sm:max-w-[370px] lg:max-w-[410px] shrink-0 my-auto">
+          <div className="relative rounded-2xl sm:rounded-3xl bg-black/75 sm:bg-neutral-950/80 border border-amber-500/35 backdrop-blur-xl p-4 sm:p-6 lg:p-7 shadow-2xl shadow-black/90 ring-1 ring-amber-400/20">
             {/* Top Playin Exchange Logo (Compact) */}
-            <PlayinExchangeLogo compact className="mb-1" />
+            <PlayinExchangeLogo compact className="mb-0.5 sm:mb-1" />
 
             {/* Header Titles */}
-            <div className="text-center my-2 sm:my-3">
+            <div className="text-center my-1.5 sm:my-3">
               <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
                 Welcome Back
               </h1>
@@ -215,7 +229,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-1.5 py-2.5 sm:py-3 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider text-black bg-gradient-to-r from-[#D4AF37] via-[#FFDF73] to-[#AA771C] hover:brightness-110 active:scale-[0.99] transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                className="w-full mt-2.5 py-3 sm:py-3.5 rounded-xl font-black text-sm uppercase tracking-wider text-black bg-gradient-to-r from-[#D4AF37] via-[#FFDF73] to-[#AA771C] hover:brightness-110 active:scale-[0.99] transition-all shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 ring-1 ring-amber-300/40"
               >
                 {isLoading ? (
                   <>

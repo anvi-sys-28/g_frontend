@@ -18,7 +18,7 @@ export function AppHeader() {
       try {
         setIsAuth(Boolean(localStorage.getItem('playin_auth') && sessionStorage.getItem('playin_session_active')));
       } catch {
-        setIsAuth(true);
+        setIsAuth(false);
       }
     };
     check();
