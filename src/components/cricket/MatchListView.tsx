@@ -68,6 +68,27 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
     }
   };
 
+  // Auto-fetch fresh live data on mount if initial render had no live matches or fallback data
+  useEffect(() => {
+    const shouldFetch =
+      matches.length === 0 ||
+      matches.every((m) => m.status !== 'live') ||
+      currentMeta.provider === 'fallback';
+    if (shouldFetch) {
+      handleGetData();
+    }
+  }, []);
+
+  // Periodic background refresh for live scores (every 30 seconds when tab is active)
+  useEffect(() => {
+    const liveInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        handleGetData();
+      }
+    }, 30000);
+    return () => clearInterval(liveInterval);
+  }, []);
+
   // Categorize matches
   const liveMatches = useMemo(() => matches.filter((m) => m.status === 'live'), [matches]);
   const upcomingMatches = useMemo(() => matches.filter((m) => m.status === 'upcoming'), [matches]);

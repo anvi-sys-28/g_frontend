@@ -82,7 +82,7 @@ export default function LoginPage() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/ml.webp"
-        alt="Playin Exchange Mobile Background"
+        alt="Bet Adda Mobile Background"
         className="fixed inset-0 w-full h-full object-cover object-top pointer-events-none md:hidden"
       />
 
@@ -90,7 +90,7 @@ export default function LoginPage() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/lb.webp"
-        alt="Playin Exchange Desktop Background"
+        alt="Bet Adda Desktop Background"
         className="fixed inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none hidden md:block"
       />
 
@@ -100,7 +100,7 @@ export default function LoginPage() {
       <div className="fixed inset-0 bg-radial-gradient from-transparent via-black/20 to-black/60 pointer-events-none" />
 
       {/* Mobile Top Visual Area: Displays model & casino chips cleanly at top of screen */}
-      <div className="w-full h-[18vh] min-h-[100px] max-h-[220px] shrink-0 pointer-events-none lg:hidden" />
+      <div className="w-full h-[38vh] min-h-[260px] max-h-[380px] shrink-0 pointer-events-none lg:hidden" />
 
       {/* Main Container: Mobile flows smoothly with plenty of bottom padding for scroll; Desktop balanced */}
       <div className="relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pt-1 sm:pt-6 pb-28 sm:pb-12 flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-8 flex-1">
@@ -118,10 +118,10 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side: Sleek, Compact Glassmorphism Login Interface */}
-        <div className="w-full max-w-[340px] sm:max-w-[370px] lg:max-w-[410px] shrink-0 my-auto">
+        <div className="w-full max-w-[340px] sm:max-w-[370px] lg:max-w-[410px] shrink-0 mt-2 mb-6 lg:my-auto">
           <div className="relative rounded-2xl sm:rounded-3xl bg-black/75 sm:bg-neutral-950/80 border border-amber-500/35 backdrop-blur-xl p-4 sm:p-6 lg:p-7 shadow-2xl shadow-black/90 ring-1 ring-amber-400/20">
-            {/* Top Playin Exchange Logo (Compact) */}
-            <PlayinExchangeLogo compact className="mb-0.5 sm:mb-1" />
+            {/* Top Bet Adda Logo (Compact) */}
+            <PlayinExchangeLogo compact title="BET" subtitle="ADDA" className="mb-0.5 sm:mb-1" />
 
             {/* Header Titles */}
             <div className="text-center my-1.5 sm:my-3">

@@ -116,7 +116,7 @@ const CONFIGURED_API_KEYS = [
 // Global in-memory cache to preserve quota until user explicitly clicks "Get Data"
 let todayMatchesCache: { response: TodayMatchesResponse; timestamp: number } | null = null;
 const matchDetailCache = new Map<string, { data: MatchDetailData; timestamp: number }>();
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour cache TTL
+const CACHE_TTL_MS = 15 * 1000; // 15 seconds cache TTL for real-time live updates
 
 // Global in-memory pool tracking for server requests
 const exhaustedKeySet = new Set<string>();
@@ -335,6 +335,100 @@ export function normalizeCricApiMatch(raw: any): Match {
   };
 }
 
+export function parseScoreSummary(scoreStr?: string): TeamScoreSummary | undefined {
+  if (!scoreStr || !scoreStr.trim()) return undefined;
+  const m = scoreStr.match(/(\d+)(?:\/(\d+))?(?:\s*\(([\d.]+)\))?/);
+  if (!m) return { runs: 0, wickets: 0, overs: 0, display: scoreStr.trim() };
+  const runs = parseInt(m[1], 10) || 0;
+  const wickets = m[2] !== undefined ? parseInt(m[2], 10) : 0;
+  const overs = m[3] !== undefined ? parseFloat(m[3]) : 0;
+  return {
+    runs,
+    wickets,
+    overs,
+    display: scoreStr.trim(),
+  };
+}
+
+export function normalizeCricScoreMatch(raw: any): Match {
+  const t1Raw = raw.t1 || 'Team A';
+  const t2Raw = raw.t2 || 'Team B';
+
+  const t1Name = t1Raw.replace(/\[.*?\]/, '').trim();
+  const t1Code = t1Raw.match(/\[(.*?)\]/)?.[1] || getTeamCode(t1Name);
+
+  const t2Name = t2Raw.replace(/\[.*?\]/, '').trim();
+  const t2Code = t2Raw.match(/\[(.*?)\]/)?.[1] || getTeamCode(t2Name);
+
+  const teamAScore = parseScoreSummary(raw.t1s);
+  const teamBScore = parseScoreSummary(raw.t2s);
+
+  let status: MatchStatus = 'upcoming';
+  if (raw.ms === 'live') {
+    status = 'live';
+  } else if (raw.ms === 'result') {
+    status = 'completed';
+  } else if (raw.ms === 'fixture') {
+    status = 'upcoming';
+  } else {
+    status = deriveMatchStatus(raw);
+  }
+
+  const seriesName = raw.series || 'Cricket Series';
+  const format = deriveMatchFormat(raw.matchType);
+  const startTime = raw.dateTimeGMT ? `${raw.dateTimeGMT}Z` : new Date().toISOString();
+
+  const scores: any[] = [];
+  if (teamAScore) {
+    scores.push({
+      r: teamAScore.runs,
+      w: teamAScore.wickets,
+      o: teamAScore.overs,
+      inning: `${t1Name} Inning 1`,
+    });
+  }
+  if (teamBScore) {
+    scores.push({
+      r: teamBScore.runs,
+      w: teamBScore.wickets,
+      o: teamBScore.overs,
+      inning: `${t2Name} Inning 1`,
+    });
+  }
+
+  return {
+    id: raw.id || 'unknown',
+    slug: `${t1Code.toLowerCase()}-vs-${t2Code.toLowerCase()}-${raw.id || ''}`,
+    title: `${t1Name} vs ${t2Name}`,
+    seriesId: raw.series_id || raw.id || 'series-default',
+    seriesName,
+    format,
+    status,
+    statusText: raw.status || (status === 'live' ? 'Live in play' : status === 'completed' ? 'Match completed' : 'Scheduled'),
+    venue: raw.venue || seriesName,
+    city: 'Live Stadium',
+    startTime,
+    teamA: {
+      id: t1Code.toLowerCase(),
+      name: t1Name,
+      shortName: t1Code,
+      code: t1Code,
+      logoUrl: raw.t1img,
+    },
+    teamB: {
+      id: t2Code.toLowerCase(),
+      name: t2Name,
+      shortName: t2Code,
+      code: t2Code,
+      logoUrl: raw.t2img,
+    },
+    teamAScore,
+    teamBScore,
+    scores,
+    currentInningsNumber: scores.length > 0 ? scores.length : 1,
+  };
+}
+
 async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
   resetExhaustedKeysIfNewDay();
 
@@ -357,6 +451,81 @@ async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
       continue;
     }
 
+    // 1. Primary Live Source: cricScore endpoint (dedicated live scores for all live, upcoming, and result matches)
+    try {
+      const res = await fetch(`https://api.cricapi.com/v1/cricScore?apikey=${key}`, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (res.status === 429) {
+        exhaustedKeySet.add(key);
+        quotaExhaustedCount++;
+        continue;
+      }
+
+      if (!res.ok) {
+        continue;
+      }
+
+      const json = await res.json();
+      if (json.status !== 'success') {
+        const reason = String(json.reason || json.message || '').toLowerCase();
+        if (
+          reason.includes('exceeded limit') ||
+          reason.includes('blocking') ||
+          reason.includes('hit limit') ||
+          reason.includes('rate limit')
+        ) {
+          exhaustedKeySet.add(key);
+          quotaExhaustedCount++;
+          continue;
+        }
+        continue;
+      }
+
+      if (Array.isArray(json.data) && json.data.length > 0) {
+        const matches: Match[] = json.data.map(normalizeCricScoreMatch);
+
+        // Sort: Live matches at top, then upcoming by startTime, then recent completed
+        const liveMatches = matches.filter((m) => m.status === 'live');
+        const upcomingMatches = matches
+          .filter((m) => m.status === 'upcoming')
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        const finishedMatches = matches
+          .filter((m) => m.status === 'completed' || m.status === 'abandoned')
+          .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+        const sortedMatches = [...liveMatches, ...upcomingMatches, ...finishedMatches];
+
+        return {
+          matches: sortedMatches,
+          meta: {
+            provider: 'cricketdata',
+            dailyBudget: 100 * allCandidateKeys.length,
+            usableBudget: 80 * allCandidateKeys.length,
+            callsToday: json.info?.hitsToday || 1,
+            remainingBudget: Math.max(0, (json.info?.hitsLimit || 100) - (json.info?.hitsToday || 1)),
+            lastSuccessfulFetch: new Date().toISOString(),
+            lastError: null,
+            nextScheduledPoll: null,
+            pollIntervalMs: 15000,
+            isBudgetExhausted: false,
+            isAllKeysExhausted: false,
+            totalMatches: sortedMatches.length,
+            liveMatches: liveMatches.length,
+            upcomingMatches: upcomingMatches.length,
+            finishedMatches: finishedMatches.length,
+            updatedAt: new Date().toISOString(),
+          },
+          isMock: false,
+        };
+      }
+    } catch {
+      // Continue to secondary endpoint or next key
+    }
+
+    // 2. Secondary fallback: currentMatches endpoint
     try {
       const res = await fetch(`https://api.cricapi.com/v1/currentMatches?apikey=${key}&offset=0`, {
         headers: { Accept: 'application/json' },
@@ -389,14 +558,16 @@ async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
         continue;
       }
 
-      if (Array.isArray(json.data)) {
+      if (Array.isArray(json.data) && json.data.length > 0) {
         const matches: Match[] = json.data.map(normalizeCricApiMatch);
         const liveMatches = matches.filter((m) => m.status === 'live');
         const upcomingMatches = matches.filter((m) => m.status === 'upcoming');
         const finishedMatches = matches.filter((m) => m.status === 'completed' || m.status === 'abandoned');
 
+        const sortedMatches = [...liveMatches, ...upcomingMatches, ...finishedMatches];
+
         return {
-          matches,
+          matches: sortedMatches,
           meta: {
             provider: 'cricketdata',
             dailyBudget: 100 * allCandidateKeys.length,
@@ -406,10 +577,10 @@ async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
             lastSuccessfulFetch: new Date().toISOString(),
             lastError: null,
             nextScheduledPoll: null,
-            pollIntervalMs: 60000,
+            pollIntervalMs: 15000,
             isBudgetExhausted: false,
             isAllKeysExhausted: false,
-            totalMatches: matches.length,
+            totalMatches: sortedMatches.length,
             liveMatches: liveMatches.length,
             upcomingMatches: upcomingMatches.length,
             finishedMatches: finishedMatches.length,
@@ -452,7 +623,7 @@ async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
 }
 
 export async function getTodayMatches(forceRefresh = false): Promise<TodayMatchesResponse> {
-  // If not forcing refresh, return in-memory cached data if available (saves API hits)
+  // If not forcing refresh, return in-memory cached data if fresh (15 seconds TTL)
   if (!forceRefresh && todayMatchesCache && Date.now() - todayMatchesCache.timestamp < CACHE_TTL_MS) {
     return todayMatchesCache.response;
   }
@@ -460,98 +631,81 @@ export async function getTodayMatches(forceRefresh = false): Promise<TodayMatche
   const providerConfig = process.env.CRICKET_PROVIDER || 'cricketdata';
   const isMock = providerConfig === 'mock';
 
-  // 1. Try reading directly from Redis cache
-  try {
-    if (redis) {
-      if (redis.status === 'wait') {
-        await redis.connect();
+  // If forceRefresh, directly fetch from CricAPI live API pool to guarantee REAL fresh live data!
+  if (forceRefresh && !isMock) {
+    try {
+      const liveResult = await fetchFromCricApiPool();
+      if (liveResult && liveResult.matches.length > 0) {
+        todayMatchesCache = { response: liveResult, timestamp: Date.now() };
+        if (redis && redis.status === 'ready') {
+          redis.set('matches:today', JSON.stringify(liveResult.matches)).catch(() => {});
+          redis.set('matches:today:meta', JSON.stringify(liveResult.meta)).catch(() => {});
+        }
+        return liveResult;
       }
+    } catch {}
+  }
 
-      const [matchesRaw, metaRaw] = await Promise.all([
-        redis.get('matches:today'),
-        redis.get('matches:today:meta'),
-      ]);
-
-      if (matchesRaw) {
-        const matches: Match[] = JSON.parse(matchesRaw);
-        const meta: MatchesDataMeta = metaRaw
-          ? JSON.parse(metaRaw)
-          : {
-              provider: providerConfig,
-              dailyBudget: 300,
-              usableBudget: 240,
-              callsToday: 1,
-              remainingBudget: 239,
-              lastSuccessfulFetch: new Date().toISOString(),
-              lastError: null,
-              nextScheduledPoll: null,
-              pollIntervalMs: 60000,
-              isBudgetExhausted: false,
-              isAllKeysExhausted: false,
-              totalMatches: matches.length,
-              liveMatches: matches.filter((m) => m.status === 'live').length,
-              upcomingMatches: matches.filter((m) => m.status === 'upcoming').length,
-              finishedMatches: matches.filter((m) => m.status === 'completed' || m.status === 'abandoned').length,
-              updatedAt: new Date().toISOString(),
-            };
-
-        if (meta.isAllKeysExhausted) {
-          meta.lastError = 'out of limit for today';
+  // 1. If not forcing refresh, try reading from Redis cache
+  if (!forceRefresh) {
+    try {
+      if (redis) {
+        if (redis.status === 'wait') {
+          await redis.connect();
         }
 
-        const res = { matches, meta, isMock };
-        todayMatchesCache = { response: res, timestamp: Date.now() };
-        return res;
-      }
-    }
-  } catch {}
+        const [matchesRaw, metaRaw] = await Promise.all([
+          redis.get('matches:today'),
+          redis.get('matches:today:meta'),
+        ]);
 
-  // 2. Try fetching from backend / realtime service REST endpoint
-  const backendUrl =
-    process.env.BACKEND_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    process.env.NEXT_PUBLIC_REALTIME_URL ||
-    'http://localhost:4001';
+        if (matchesRaw) {
+          const matches: Match[] = JSON.parse(matchesRaw);
+          const meta: MatchesDataMeta = metaRaw
+            ? JSON.parse(metaRaw)
+            : {
+                provider: providerConfig,
+                dailyBudget: 300,
+                usableBudget: 240,
+                callsToday: 1,
+                remainingBudget: 239,
+                lastSuccessfulFetch: new Date().toISOString(),
+                lastError: null,
+                nextScheduledPoll: null,
+                pollIntervalMs: 15000,
+                isBudgetExhausted: false,
+                isAllKeysExhausted: false,
+                totalMatches: matches.length,
+                liveMatches: matches.filter((m) => m.status === 'live').length,
+                upcomingMatches: matches.filter((m) => m.status === 'upcoming').length,
+                finishedMatches: matches.filter((m) => m.status === 'completed' || m.status === 'abandoned').length,
+                updatedAt: new Date().toISOString(),
+              };
 
-  try {
-    const res = await fetch(`${backendUrl}/api/matches/today`, {
-      next: { revalidate: 2 },
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (Array.isArray(json.matches)) {
-        const meta = json.meta || {
-          provider: providerConfig,
-          updatedAt: new Date().toISOString(),
-        };
-
-        if (meta.isAllKeysExhausted) {
-          meta.lastError = 'out of limit for today';
+          const res = { matches, meta, isMock };
+          todayMatchesCache = { response: res, timestamp: Date.now() };
+          return res;
         }
-
-        const out = {
-          matches: json.matches,
-          meta,
-          isMock,
-        };
-        todayMatchesCache = { response: out, timestamp: Date.now() };
-        return out;
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
-  // 3. Direct fetch from CricAPI using multi-key pool
+  // 2. Direct fetch from CricAPI using multi-key pool
   if (!isMock) {
     try {
       const cricApiResult = await fetchFromCricApiPool();
-      if (cricApiResult) {
+      if (cricApiResult && cricApiResult.matches.length > 0) {
         todayMatchesCache = { response: cricApiResult, timestamp: Date.now() };
+        if (redis && redis.status === 'ready') {
+          redis.set('matches:today', JSON.stringify(cricApiResult.matches)).catch(() => {});
+          redis.set('matches:today:meta', JSON.stringify(cricApiResult.meta)).catch(() => {});
+        }
         return cricApiResult;
       }
     } catch {}
   }
 
-  // 4. Resilient Fallback: Return matches with 0 live matches (NO fake live data)
+  // 3. Fallback: Return clean structured fallback matches if offline
   const fallbackRes: TodayMatchesResponse = {
     matches: FALLBACK_MATCHES,
     meta: {
@@ -582,56 +736,44 @@ export async function getTodayMatches(forceRefresh = false): Promise<TodayMatche
  * Fallback match detail generator ensuring zero 404s even if offline or using fixture ID
  */
 function generateFallbackMatchDetail(matchId: string): MatchDetailData {
-  const existing = FALLBACK_MATCHES.find((m) => m.id === matchId) || FALLBACK_MATCHES[0];
+  const existing =
+    todayMatchesCache?.response.matches.find((m) => m.id === matchId) ||
+    FALLBACK_MATCHES.find((m) => m.id === matchId) ||
+    FALLBACK_MATCHES[0];
   const tA = existing.teamA;
   const tB = existing.teamB;
 
+  const scorecard: InningScorecard[] = [];
+  if (existing.teamAScore) {
+    scorecard.push({
+      inning: `${tA.name} Inning 1`,
+      battingTeamName: tA.name,
+      batting: [],
+      bowling: [],
+      totalScore: existing.teamAScore.display,
+    });
+  }
+  if (existing.teamBScore) {
+    scorecard.push({
+      inning: `${tB.name} Inning 1`,
+      battingTeamName: tB.name,
+      batting: [],
+      bowling: [],
+      totalScore: existing.teamBScore.display,
+    });
+  }
+
   return {
     match: existing,
-    scorecard: [
-      {
-        inning: `${tA.name} Inning 1`,
-        battingTeamName: tA.name,
-        batting: [
-          { id: 'b1', name: 'Opening Batter 1', dismissal: 'c Wicketkeeper b Bowler 1', runs: 64, balls: 42, fours: 7, sixes: 2, strikeRate: 152.38 },
-          { id: 'b2', name: 'Opening Batter 2', dismissal: 'b Bowler 2', runs: 38, balls: 28, fours: 4, sixes: 1, strikeRate: 135.71 },
-          { id: 'b3', name: 'Captain Batter', dismissal: 'not out', runs: 82, balls: 45, fours: 8, sixes: 4, strikeRate: 182.22 },
-          { id: 'b4', name: 'Middle Order Batter', dismissal: 'run out', runs: 24, balls: 15, fours: 2, sixes: 1, strikeRate: 160.0 },
-          { id: 'b5', name: 'All-Rounder', dismissal: 'not out', runs: 18, balls: 8, fours: 2, sixes: 1, strikeRate: 225.0 },
-        ],
-        bowling: [
-          { id: 'bw1', name: 'Lead Pace Bowler', overs: 4, maidens: 0, runs: 32, wickets: 1, economy: 8.0, wides: 1, noBalls: 0 },
-          { id: 'bw2', name: 'Opening Bowler', overs: 4, maidens: 0, runs: 44, wickets: 1, economy: 11.0, wides: 2, noBalls: 0 },
-          { id: 'bw3', name: 'Mystery Spinner', overs: 4, maidens: 0, runs: 28, wickets: 0, economy: 7.0, wides: 0, noBalls: 0 },
-          { id: 'bw4', name: 'Death Overs Specialist', overs: 4, maidens: 0, runs: 38, wickets: 0, economy: 9.5, wides: 1, noBalls: 1 },
-        ],
-        totalScore: existing.teamAScore?.display || '223/4 (20.0 ov)',
-      },
-      {
-        inning: `${tB.name} Inning 1`,
-        battingTeamName: tB.name,
-        batting: [
-          { id: 'b21', name: 'Top Order Batter 1', dismissal: 'b Lead Pace Bowler', runs: 45, balls: 30, fours: 5, sixes: 2, strikeRate: 150.0 },
-          { id: 'b22', name: 'Top Order Batter 2', dismissal: 'c Slip b Opening Bowler', runs: 29, balls: 19, fours: 3, sixes: 1, strikeRate: 152.63 },
-          { id: 'b23', name: 'Power Hitter', dismissal: 'c Long-on b Mystery Spinner', runs: 58, balls: 35, fours: 4, sixes: 4, strikeRate: 165.71 },
-          { id: 'b24', name: 'Finisher', dismissal: 'not out', runs: 34, balls: 20, fours: 3, sixes: 1, strikeRate: 170.0 },
-        ],
-        bowling: [
-          { id: 'bw21', name: 'Opening Pacer', overs: 4, maidens: 0, runs: 35, wickets: 2, economy: 8.75, wides: 0, noBalls: 0 },
-          { id: 'bw22', name: 'Left-Arm Spinner', overs: 4, maidens: 0, runs: 30, wickets: 1, economy: 7.5, wides: 1, noBalls: 0 },
-          { id: 'bw23', name: 'Fast Bowler', overs: 4, maidens: 0, runs: 42, wickets: 0, economy: 10.5, wides: 2, noBalls: 0 },
-        ],
-        totalScore: existing.teamBScore?.display || '209/7 (20.0 ov)',
-      },
-    ],
+    scorecard,
     squads: {
       teamA: {
         name: tA.name,
-        players: ['Captain Player', 'Opener 1', 'Opener 2', 'Wicketkeeper', 'Middle Batter', 'All-Rounder', 'Spinner', 'Pacer 1', 'Pacer 2', 'Bowler 3', 'Bowler 4'],
+        players: ['Playing XI will be announced at toss'],
       },
       teamB: {
         name: tB.name,
-        players: ['Captain 2', 'Opener A', 'Opener B', 'Wicketkeeper 2', 'Power Hitter', 'All-Rounder 2', 'Spinner 2', 'Pacer A', 'Pacer B', 'Bowler C', 'Bowler D'],
+        players: ['Playing XI will be announced at toss'],
       },
     },
     broadcast: 'Star Sports Network, DD Sports, JioHotstar',
@@ -647,43 +789,24 @@ function generateFallbackMatchDetail(matchId: string): MatchDetailData {
     headToHead: {
       teamAWins: 6,
       teamBWins: 4,
-      recentMatches: [
-        {
-          title: `3rd T20I, ${existing.seriesName}`,
-          teamAScore: '223 (20.0)',
-          teamBScore: '209/7 (20.0)',
-          result: `${tA.shortName} Won by 14 runs`,
-        },
-        {
-          title: `2nd T20I, ${existing.seriesName}`,
-          teamAScore: '249/5 (20.0)',
-          teamBScore: '252/4 (18.3)',
-          result: `${tB.shortName} Won by 6 wickets`,
-        },
-        {
-          title: `1st T20I, ${existing.seriesName}`,
-          teamAScore: '172/2 (14.4)',
-          teamBScore: '171 (19.1)',
-          result: `${tA.shortName} Won by 8 wickets`,
-        },
-      ],
+      recentMatches: [],
     },
     teamComparison: {
       overall: {
         teamAMatches: 10,
         teamBMatches: 10,
-        teamAWinRate: '90%',
-        teamBWinRate: '50%',
+        teamAWinRate: '60%',
+        teamBWinRate: '40%',
         teamAAvgScore: 178,
-        teamBAvgScore: 189,
+        teamBAvgScore: 165,
       },
       onVenue: {
-        teamAMatches: 5,
-        teamBMatches: 5,
-        teamAWinRate: '80%',
-        teamBWinRate: '40%',
-        teamAAvgScore: 182,
-        teamBAvgScore: 174,
+        teamAMatches: 3,
+        teamBMatches: 3,
+        teamAWinRate: '67%',
+        teamBWinRate: '33%',
+        teamAAvgScore: 180,
+        teamBAvgScore: 160,
       },
     },
   };
@@ -691,10 +814,14 @@ function generateFallbackMatchDetail(matchId: string): MatchDetailData {
 
 /**
  * Retrieves full match detail including real-time batsmen, bowlers, and scorecard.
- * Caches responses in memory so repeated clicks never waste API keys.
+ * Caches responses in memory for 15s to preserve quota while allowing live updates.
  * User can trigger forceRefresh=true with the "GET DATA" button.
  */
 export async function getMatchDetail(matchId: string, forceRefresh = false): Promise<MatchDetailData> {
+  if (forceRefresh) {
+    matchDetailCache.delete(matchId);
+  }
+
   if (!forceRefresh && matchDetailCache.has(matchId)) {
     const cached = matchDetailCache.get(matchId)!;
     if (Date.now() - cached.timestamp < CACHE_TTL_MS) {

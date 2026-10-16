@@ -5,9 +5,13 @@ import React from 'react';
 export function PlayinExchangeLogo({
   className = '',
   compact = false,
+  title = 'BET',
+  subtitle = 'ADDA',
 }: {
   className?: string;
   compact?: boolean;
+  title?: string;
+  subtitle?: string;
 }) {
   return (
     <div className={`flex flex-col items-center justify-center select-none ${className}`}>
@@ -76,10 +80,10 @@ export function PlayinExchangeLogo({
         <div className={`h-[1px] flex-1 ${compact ? 'max-w-[35px]' : 'max-w-[45px] sm:max-w-[60px]'} bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-[#FFDF73]`} />
         <div className="flex flex-col items-center">
           <span className={`${compact ? 'text-sm' : 'text-base sm:text-xl md:text-2xl'} font-black tracking-widest text-white uppercase drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]`}>
-            PLAYIN
+            {title}
           </span>
           <span className={`${compact ? 'text-[9px]' : 'text-[10px] sm:text-xs md:text-sm'} font-extrabold tracking-[0.25em] text-[#D4AF37] uppercase -mt-0.5 sm:-mt-1 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]`}>
-            EXCHANGE
+            {subtitle}
           </span>
         </div>
         <div className={`h-[1px] flex-1 ${compact ? 'max-w-[35px]' : 'max-w-[45px] sm:max-w-[60px]'} bg-gradient-to-l from-transparent via-[#D4AF37]/60 to-[#FFDF73]`} />
@@ -88,4 +92,5 @@ export function PlayinExchangeLogo({
   );
 }
 
+export const BetAddaLogo = PlayinExchangeLogo;
 export default PlayinExchangeLogo;

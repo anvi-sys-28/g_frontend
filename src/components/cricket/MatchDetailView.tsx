@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MatchDetailData, BatsmanDetail, BowlerDetail } from '@/types/models';
@@ -65,6 +65,17 @@ export function MatchDetailView({ initialData, matchId }: MatchDetailViewProps) 
       setIsRefreshing(false);
     }
   };
+
+  // Periodic background refresh for live match scorecard (every 15s when active)
+  useEffect(() => {
+    if (match.status !== 'live') return;
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        handleGetData();
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [match.status]);
 
   const handleVote = (team: 'teamA' | 'teamB') => {
     if (userVote) return;
