@@ -42,9 +42,11 @@ export function MatchDetailView({ initialData, matchId }: MatchDetailViewProps) 
   const { match, scorecard, squads, headToHead, teamComparison, teamForm } = data;
 
   // Manual "GET DATA" button handler: fetches real-time API data on-demand without wasting background quota
-  const handleGetData = async () => {
-    setIsRefreshing(true);
-    setRefreshNotice(null);
+  const handleGetData = async (isManual = false) => {
+    if (isManual) {
+      setIsRefreshing(true);
+      setRefreshNotice(null);
+    }
     try {
       const res = await fetch(`/api/match/${matchId}?refresh=true`, {
         cache: 'no-store',
@@ -52,17 +54,23 @@ export function MatchDetailView({ initialData, matchId }: MatchDetailViewProps) 
       if (res.ok) {
         const freshData: MatchDetailData = await res.json();
         setData(freshData);
-        setRefreshNotice('Data updated from Live API');
-        setTimeout(() => setRefreshNotice(null), 3000);
-      } else {
+        if (isManual) {
+          setRefreshNotice('Data updated from Live API');
+          setTimeout(() => setRefreshNotice(null), 3000);
+        }
+      } else if (isManual) {
         setRefreshNotice('Using latest cached data');
         setTimeout(() => setRefreshNotice(null), 3000);
       }
     } catch {
-      setRefreshNotice('Network error, serving offline data');
-      setTimeout(() => setRefreshNotice(null), 3000);
+      if (isManual) {
+        setRefreshNotice('Network error, serving offline data');
+        setTimeout(() => setRefreshNotice(null), 3000);
+      }
     } finally {
-      setIsRefreshing(false);
+      if (isManual) {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -71,7 +79,7 @@ export function MatchDetailView({ initialData, matchId }: MatchDetailViewProps) 
     if (match.status !== 'live') return;
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && !document.hidden) {
-        handleGetData();
+        handleGetData(false);
       }
     }, 15000);
     return () => clearInterval(interval);
@@ -113,7 +121,7 @@ export function MatchDetailView({ initialData, matchId }: MatchDetailViewProps) 
 
         {/* High-Contrast "GET DATA" Button to fetch real-time data on demand */}
         <button
-          onClick={handleGetData}
+          onClick={() => handleGetData(true)}
           disabled={isRefreshing}
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-neutral-950 text-xs font-black tracking-wider uppercase shadow-[0_0_12px_rgba(245,158,11,0.5)] hover:from-amber-300 hover:to-yellow-400 active:scale-95 transition-all disabled:opacity-75"
         >
@@ -710,7 +718,7 @@ export function MatchDetailView({ initialData, matchId }: MatchDetailViewProps) 
                   Hit the <span className="font-bold text-amber-300">GET DATA</span> button at the top to fetch the latest real-time updates directly from the live API.
                 </p>
                 <button
-                  onClick={handleGetData}
+                  onClick={() => handleGetData(true)}
                   disabled={isRefreshing}
                   className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-neutral-950 font-black text-xs hover:from-amber-300 hover:to-yellow-400 transition-all shadow-md"
                 >

@@ -49,10 +49,10 @@ export function SmoothVideoCard({
     [framesDir]
   );
 
-  // Preload initial buffer of frames on mount for instant zero-lag hover playback
+  // Preload initial small buffer on mount without flooding network threads
   useEffect(() => {
     let isCancelled = false;
-    for (let i = 1; i <= 60; i++) {
+    for (let i = 1; i <= 3; i++) {
       if (isCancelled) break;
       loadFrame(i);
     }
@@ -66,19 +66,19 @@ export function SmoothVideoCard({
     if (!isHovered) return;
 
     let isCancelled = false;
-    let nextBatch = 61;
+    let nextBatch = 4;
 
     const streamRemaining = () => {
       if (isCancelled || !isHovered || nextBatch > totalFrames) return;
 
-      const batchEnd = Math.min(nextBatch + 30, totalFrames);
+      const batchEnd = Math.min(nextBatch + 15, totalFrames);
       for (let i = nextBatch; i <= batchEnd; i++) {
         loadFrame(i);
       }
       nextBatch = batchEnd + 1;
 
       if (nextBatch <= totalFrames) {
-        setTimeout(streamRemaining, 35);
+        setTimeout(streamRemaining, 40);
       }
     };
 

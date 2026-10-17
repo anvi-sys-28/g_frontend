@@ -39,9 +39,11 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
   const [bannerSlide, setBannerSlide] = useState<number>(0);
 
   // Manual "GET DATA" button handler: fetches real-time API data on-demand without wasting background quota
-  const handleGetData = async () => {
-    setIsRefreshing(true);
-    setRefreshToast(null);
+  const handleGetData = async (isManual = false) => {
+    if (isManual) {
+      setIsRefreshing(true);
+      setRefreshToast(null);
+    }
     try {
       const res = await fetch('/api/matches/today?refresh=true', {
         cache: 'no-store',
@@ -54,17 +56,23 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
         if (json.meta) {
           setCurrentMeta(json.meta);
         }
-        setRefreshToast('Live matches updated');
-        setTimeout(() => setRefreshToast(null), 3000);
-      } else {
+        if (isManual) {
+          setRefreshToast('Live matches updated');
+          setTimeout(() => setRefreshToast(null), 3000);
+        }
+      } else if (isManual) {
         setRefreshToast('Showing latest cached matches');
         setTimeout(() => setRefreshToast(null), 3000);
       }
     } catch {
-      setRefreshToast('Network error, showing offline data');
-      setTimeout(() => setRefreshToast(null), 3000);
+      if (isManual) {
+        setRefreshToast('Network error, showing offline data');
+        setTimeout(() => setRefreshToast(null), 3000);
+      }
     } finally {
-      setIsRefreshing(false);
+      if (isManual) {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -75,7 +83,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
       matches.every((m) => m.status !== 'live') ||
       currentMeta.provider === 'fallback';
     if (shouldFetch) {
-      handleGetData();
+      handleGetData(false);
     }
   }, []);
 
@@ -83,7 +91,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
   useEffect(() => {
     const liveInterval = setInterval(() => {
       if (typeof document !== 'undefined' && !document.hidden) {
-        handleGetData();
+        handleGetData(false);
       }
     }, 30000);
     return () => clearInterval(liveInterval);
@@ -317,7 +325,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
 
           {/* Action: "GET DATA" button to fetch live API data on demand without wasting quota */}
           <button
-            onClick={handleGetData}
+            onClick={() => handleGetData(true)}
             disabled={isRefreshing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-neutral-950 font-black text-xs uppercase tracking-wider hover:from-amber-300 hover:to-yellow-400 active:scale-95 transition-all shadow-[0_0_12px_rgba(245,158,11,0.5)] shrink-0 disabled:opacity-75"
           >

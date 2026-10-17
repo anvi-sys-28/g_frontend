@@ -83,6 +83,74 @@ export const PAYOUT_RATIOS: Record<BetType, PayoutRule> = {
 };
 
 /**
+ * Helper to test if two numbers are adjacent on the European roulette 3x12 felt
+ */
+export function areNumbersAdjacent(a: number, b: number): boolean {
+  if (a === b) return false;
+  if (a < 0 || a > 36 || b < 0 || b > 36) return false;
+  // Splits with Zero
+  if (a === 0 && (b === 1 || b === 2 || b === 3)) return true;
+  if (b === 0 && (a === 1 || a === 2 || a === 3)) return true;
+  if (a === 0 || b === 0) return false;
+
+  const min = Math.min(a, b);
+  const max = Math.max(a, b);
+
+  // Horizontal adjacency on grid: difference is 3 (e.g. 1 & 4, 2 & 5, 3 & 6)
+  if (max - min === 3) return true;
+
+  // Vertical adjacency on grid: difference is 1, but must be in the same column
+  if (max - min === 1 && min % 3 !== 0) return true;
+
+  return false;
+}
+
+/**
+ * Returns the numbers for a Street bet given any number in the 3-number street
+ */
+export function getStreetNumbers(num: number): number[] {
+  if (num < 1 || num > 36) return [];
+  const colIndex = Math.floor((num - 1) / 3);
+  const start = colIndex * 3 + 1;
+  return [start, start + 1, start + 2];
+}
+
+/**
+ * Returns the 4 numbers for a Corner bet
+ */
+export function getCornerNumbers(num: number): number[] {
+  if (num < 1 || num > 36) return [];
+  const col = Math.floor((num - 1) / 3);
+  if (col >= 11) {
+    // If on last column, corner with previous column
+    return getCornerNumbers(num - 3);
+  }
+
+  // Row 1 (top): 3, 6, 9...
+  if (num % 3 === 0) {
+    return [num - 1, num, num + 2, num + 3].sort((x, y) => x - y);
+  }
+  // Row 2 (mid): 2, 5, 8...
+  if (num % 3 === 2) {
+    return [num - 1, num, num + 2, num + 3].sort((x, y) => x - y);
+  }
+  // Row 3 (bot): 1, 4, 7...
+  return [num, num + 1, num + 3, num + 4].sort((x, y) => x - y);
+}
+
+/**
+ * Returns the 6 numbers for a Six-Line bet
+ */
+export function getSixLineNumbers(num: number): number[] {
+  if (num < 1 || num > 36) return [];
+  const col = Math.floor((num - 1) / 3);
+  const c = col >= 11 ? 10 : col;
+  const s1 = getStreetNumbers(c * 3 + 1);
+  const s2 = getStreetNumbers((c + 1) * 3 + 1);
+  return [...s1, ...s2];
+}
+
+/**
  * Return cryptographically secure random winning number (0-36 for European)
  */
 export function getRandomWinningNumber(wheelType: WheelType = 'european'): number {
@@ -136,8 +204,8 @@ export function evaluateSpin(
 
     if (isWinner) {
       const rule = PAYOUT_RATIOS[bet.type] || { ratio: 1 };
-      const profit = bet.amount * rule.ratio;
-      const payout = bet.amount + profit; // Return original bet + profit
+      const profit = Math.round(bet.amount * rule.ratio);
+      const payout = bet.amount + profit; // Return original bet stake + net winnings
       totalPayout += payout;
 
       winningBets.push({

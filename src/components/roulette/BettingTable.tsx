@@ -4,11 +4,15 @@ import React, { useState } from 'react';
 import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import {
   RED_NUMBERS,
+  BLACK_NUMBERS,
   PlacedBet,
-  BetType,
+  areNumbersAdjacent,
+  getStreetNumbers,
+  getCornerNumbers,
+  getSixLineNumbers,
 } from '@/lib/roulette/rouletteEngine';
 
-// Rows of numbers from left to right exactly matching the reference
+// Rows of numbers from left to right exactly matching standard European felt
 const ROW_1 = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36];
 const ROW_2 = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35];
 const ROW_3 = [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34];
@@ -23,14 +27,16 @@ function getChipVisual(amount: number) {
   return { bg: 'bg-[#374151]', border: 'border-[#9ca3af]', ring: 'ring-gray-400/50' };
 }
 
-function ChipMarker({ bet }: { bet: PlacedBet }) {
+function ChipMarker({ bet, isWinner }: { bet: PlacedBet; isWinner?: boolean }) {
   const visual = getChipVisual(bet.amount);
   const count = Object.values(bet.chips).reduce((a, b) => a + b, 0);
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none transform-gpu animate-in zoom-in-75 duration-150">
       <div
-        className={`relative w-6 h-6 rounded-full flex items-center justify-center border-2 shadow-lg shadow-black/80 font-black text-[9px] text-white ${visual.bg} ${visual.border} ring-2 ${visual.ring}`}
+        className={`relative w-6 h-6 rounded-full flex items-center justify-center border-2 shadow-lg shadow-black/80 font-black text-[9px] text-white ${visual.bg} ${visual.border} ring-2 ${
+          isWinner ? 'ring-[#f5d27a] scale-110 drop-shadow-[0_0_10px_rgba(245,210,122,0.9)] animate-bounce' : visual.ring
+        }`}
       >
         {/* Chip inner dashed circle */}
         <div className="absolute inset-0.5 rounded-full border border-dashed border-white/60 pointer-events-none" />
@@ -53,33 +59,186 @@ export function BettingTable() {
   const bets = useRouletteStore((s) => s.bets);
   const placeBet = useRouletteStore((s) => s.placeBet);
   const winningNumber = useRouletteStore((s) => s.winningNumber);
+  const spinResult = useRouletteStore((s) => s.spinResult);
   const spinState = useRouletteStore((s) => s.spinState);
 
-  // Active hover/tab inside bet mode (Straight, Split, Corner)
-  const [betMode, setBetMode] = useState<'standard' | 'splits' | 'corners'>('standard');
+  // Active betting mode: Standard (35:1), Splits (17:1), Corners (8:1), Streets (11:1), Six-Line (5:1)
+  const [betMode, setBetMode] = useState<'standard' | 'splits' | 'corners' | 'streets' | 'six-line'>('standard');
+  const [splitFirstNum, setSplitFirstNum] = useState<number | null>(null);
 
-  const handleStraightBet = (num: number) => {
-    placeBet(`straight-${num}`, 'straight', `${num}`, [num]);
-  };
+  const totalStake = Object.values(bets).reduce((acc, b) => acc + b.amount, 0);
 
   const isWinning = (num: number) => {
     return spinState === 'settled' && winningNumber === num;
   };
 
+  const isBetWinner = (betId: string) => {
+    return spinState === 'settled' && spinResult?.winningBets.some((wb) => wb.betId === betId);
+  };
+
+  const isOutsideWin = (type: string) => {
+    if (spinState !== 'settled' || winningNumber === null) return false;
+    if (type === 'red') return RED_NUMBERS.has(winningNumber);
+    if (type === 'black') return BLACK_NUMBERS.has(winningNumber);
+    if (type === 'even') return winningNumber !== 0 && winningNumber % 2 === 0;
+    if (type === 'odd') return winningNumber !== 0 && winningNumber % 2 !== 0;
+    if (type === 'low') return winningNumber >= 1 && winningNumber <= 18;
+    if (type === 'high') return winningNumber >= 19 && winningNumber <= 36;
+    if (type === 'dozen_1') return winningNumber >= 1 && winningNumber <= 12;
+    if (type === 'dozen_2') return winningNumber >= 13 && winningNumber <= 24;
+    if (type === 'dozen_3') return winningNumber >= 25 && winningNumber <= 36;
+    if (type === 'column_1') return ROW_3.includes(winningNumber);
+    if (type === 'column_2') return ROW_2.includes(winningNumber);
+    if (type === 'column_3') return ROW_1.includes(winningNumber);
+    return false;
+  };
+
+  const handleCellClick = (num: number) => {
+    if (spinState === 'spinning') return;
+
+    if (betMode === 'standard') {
+      placeBet(`straight-${num}`, 'straight', `${num}`, [num]);
+      return;
+    }
+
+    if (betMode === 'splits') {
+      if (splitFirstNum === null) {
+        setSplitFirstNum(num);
+        return;
+      }
+      if (splitFirstNum === num) {
+        setSplitFirstNum(null);
+        return;
+      }
+      if (areNumbersAdjacent(splitFirstNum, num)) {
+        const sorted = [splitFirstNum, num].sort((a, b) => a - b);
+        placeBet(`split-${sorted[0]}-${sorted[1]}`, 'split', `${sorted[0]}/${sorted[1]}`, sorted);
+        setSplitFirstNum(null);
+      } else {
+        setSplitFirstNum(num);
+      }
+      return;
+    }
+
+    if (betMode === 'corners') {
+      const cornerNums = getCornerNumbers(num);
+      if (cornerNums.length === 4) {
+        placeBet(
+          `corner-${cornerNums[0]}-${cornerNums[1]}-${cornerNums[2]}-${cornerNums[3]}`,
+          'corner',
+          `Corner ${cornerNums[0]}-${cornerNums[3]}`,
+          cornerNums
+        );
+      }
+      return;
+    }
+
+    if (betMode === 'streets') {
+      const streetNums = getStreetNumbers(num);
+      if (streetNums.length === 3) {
+        placeBet(
+          `street-${streetNums[0]}-${streetNums[2]}`,
+          'street',
+          `Street ${streetNums[0]}-${streetNums[2]}`,
+          streetNums
+        );
+      }
+      return;
+    }
+
+    if (betMode === 'six-line') {
+      const lineNums = getSixLineNumbers(num);
+      if (lineNums.length === 6) {
+        placeBet(
+          `line-${lineNums[0]}-${lineNums[5]}`,
+          'line',
+          `Line ${lineNums[0]}-${lineNums[5]}`,
+          lineNums
+        );
+      }
+      return;
+    }
+  };
+
+  const renderCellChips = (num: number) => {
+    const straightBet = bets[`straight-${num}`];
+    const hSplitBet = bets[`split-${num}-${num + 3}`];
+    const vSplitBet = num % 3 !== 0 ? bets[`split-${num}-${num + 1}`] : null;
+
+    // Corner bet where num is the bottom-left number
+    const cornerKey = Object.keys(bets).find((k) => k.startsWith(`corner-${num}-`));
+    const cornerBet = cornerKey ? bets[cornerKey] : null;
+
+    // Street bet where num is the first in street (Row 3)
+    const streetKey = Object.keys(bets).find((k) => k.startsWith(`street-${num}-`));
+    const streetBet = streetKey ? bets[streetKey] : null;
+
+    // Six-line bet where num is the first in six-line (Row 3)
+    const lineKey = Object.keys(bets).find((k) => k.startsWith(`line-${num}-`));
+    const lineBet = lineKey ? bets[lineKey] : null;
+
+    return (
+      <>
+        {straightBet && <ChipMarker bet={straightBet} isWinner={isBetWinner(straightBet.id)} />}
+
+        {hSplitBet && (
+          <div className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
+            <ChipMarker bet={hSplitBet} isWinner={isBetWinner(hSplitBet.id)} />
+          </div>
+        )}
+
+        {vSplitBet && (
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
+            <ChipMarker bet={vSplitBet} isWinner={isBetWinner(vSplitBet.id)} />
+          </div>
+        )}
+
+        {cornerBet && (
+          <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
+            <ChipMarker bet={cornerBet} isWinner={isBetWinner(cornerBet.id)} />
+          </div>
+        )}
+
+        {streetBet && (
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-30 pointer-events-none">
+            <ChipMarker bet={streetBet} isWinner={isBetWinner(streetBet.id)} />
+          </div>
+        )}
+
+        {lineBet && (
+          <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 z-30 pointer-events-none">
+            <ChipMarker bet={lineBet} isWinner={isBetWinner(lineBet.id)} />
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="relative w-full max-w-[430px] mx-auto px-1.5 select-none text-white">
-      {/* Bet Type Helper Pills for Mobile Accessibility */}
+      {/* Bet Type Helper Pills & Total Stake Header */}
       <div className="flex items-center justify-between mb-1 px-1">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-          Table Felt
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Table Felt
+          </span>
+          {totalStake > 0 && (
+            <span className="text-[9px] font-black text-[#f5d27a] bg-black/70 px-2 py-0.5 rounded-full border border-[#D4AF37]/50 shadow-sm animate-in fade-in">
+              Bet: {totalStake.toLocaleString()} Coins
+            </span>
+          )}
+        </div>
+
         <div className="flex items-center gap-1">
-          {(['standard', 'splits', 'corners'] as const).map((mode) => (
+          {(['standard', 'splits', 'corners', 'streets', 'six-line'] as const).map((mode) => (
             <button
               key={mode}
               type="button"
-              onClick={() => setBetMode(mode)}
-              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all border ${
+              onClick={() => {
+                setBetMode(mode);
+                setSplitFirstNum(null);
+              }}
+              className={`px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider transition-all border ${
                 betMode === mode
                   ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-sm'
                   : 'bg-black/40 text-neutral-400 border-white/10 hover:text-white'
@@ -101,155 +260,146 @@ export function BettingTable() {
           {/* Green "0" Cell spanning 3 rows */}
           <button
             type="button"
-            onClick={() => handleStraightBet(0)}
+            onClick={() => handleCellClick(0)}
             className={`row-span-3 relative flex items-center justify-center font-black text-lg bg-gradient-to-r from-[#0b6623] to-[#08521c] text-white hover:brightness-110 active:scale-[0.98] transition-all rounded-l-lg border border-white/20 shadow-inner ${
-              isWinning(0) ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/30' : ''
-            }`}
+              isWinning(0) ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/40 z-10' : ''
+            } ${splitFirstNum === 0 ? 'ring-2 ring-[#f5d27a] bg-yellow-400/30' : ''}`}
           >
             <span>0</span>
-            {bets['straight-0'] && <ChipMarker bet={bets['straight-0']} />}
+            {bets['straight-0'] && <ChipMarker bet={bets['straight-0']} isWinner={isBetWinner('straight-0')} />}
+            {bets['split-0-1'] && (
+              <div className="absolute bottom-2 right-0 translate-x-1/2 z-30 pointer-events-none">
+                <ChipMarker bet={bets['split-0-1']} isWinner={isBetWinner('split-0-1')} />
+              </div>
+            )}
+            {bets['split-0-2'] && (
+              <div className="absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-30 pointer-events-none">
+                <ChipMarker bet={bets['split-0-2']} isWinner={isBetWinner('split-0-2')} />
+              </div>
+            )}
+            {bets['split-0-3'] && (
+              <div className="absolute top-2 right-0 translate-x-1/2 z-30 pointer-events-none">
+                <ChipMarker bet={bets['split-0-3']} isWinner={isBetWinner('split-0-3')} />
+              </div>
+            )}
           </button>
 
           {/* ROW 1: 3, 6, 9, ... 36 */}
-          {ROW_1.map((num, colIdx) => {
+          {ROW_1.map((num) => {
             const isRed = RED_NUMBERS.has(num);
-            const betKey = `straight-${num}`;
-            const bet = bets[betKey];
             const win = isWinning(num);
+            const isSelectedFirst = splitFirstNum === num;
 
             return (
               <div key={num} className="relative h-9">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (betMode === 'splits' && colIdx < 11) {
-                      // Horizontal split with next col in row 1
-                      const next = ROW_1[colIdx + 1];
-                      placeBet(`split-${num}-${next}`, 'split', `${num}/${next}`, [num, next]);
-                    } else if (betMode === 'corners' && colIdx < 11) {
-                      // Corner with row 1 & row 2
-                      const n2 = ROW_2[colIdx];
-                      const n3 = ROW_1[colIdx + 1];
-                      const n4 = ROW_2[colIdx + 1];
-                      placeBet(`corner-${num}-${n2}-${n3}-${n4}`, 'corner', `Corner`, [num, n2, n3, n4]);
-                    } else {
-                      handleStraightBet(num);
-                    }
-                  }}
+                  onClick={() => handleCellClick(num)}
                   className={`w-full h-full flex items-center justify-center font-black text-xs transition-all border border-white/10 hover:brightness-125 active:scale-[0.96] ${
                     isRed
                       ? 'bg-gradient-to-b from-[#b81414] to-[#800d0d] text-white'
                       : 'bg-gradient-to-b from-[#212121] to-[#121212] text-white'
-                  } ${win ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/40 z-10' : ''}`}
+                  } ${win ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/40 z-10' : ''} ${
+                    isSelectedFirst ? 'ring-2 ring-[#f5d27a] bg-amber-400/40' : ''
+                  }`}
                 >
                   <span>{num}</span>
                 </button>
-                {bet && <ChipMarker bet={bet} />}
+                {renderCellChips(num)}
               </div>
             );
           })}
 
-          {/* Row 1 Column Bet: "2:1" */}
+          {/* Row 1 Column Bet: "2:1" (covers ROW_1 numbers) */}
           <button
             type="button"
             onClick={() => placeBet('column_3', 'column_3', '2:1 Col 3', ROW_1)}
-            className="relative h-9 flex items-center justify-center font-black text-[10px] bg-gradient-to-r from-[#032a18] to-[#021f12] text-[#f5d27a] border border-white/20 hover:brightness-125 active:scale-[0.96] transition-all rounded-r-lg"
+            className={`relative h-9 flex items-center justify-center font-black text-[10px] bg-gradient-to-r from-[#032a18] to-[#021f12] text-[#f5d27a] border border-white/20 hover:brightness-125 active:scale-[0.96] transition-all rounded-r-lg ${
+              isOutsideWin('column_3') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>2:1</span>
-            {bets['column_3'] && <ChipMarker bet={bets['column_3']} />}
+            {bets['column_3'] && <ChipMarker bet={bets['column_3']} isWinner={isBetWinner('column_3')} />}
           </button>
 
           {/* ROW 2: 2, 5, 8, ... 35 */}
-          {ROW_2.map((num, colIdx) => {
+          {ROW_2.map((num) => {
             const isRed = RED_NUMBERS.has(num);
-            const betKey = `straight-${num}`;
-            const bet = bets[betKey];
             const win = isWinning(num);
+            const isSelectedFirst = splitFirstNum === num;
 
             return (
               <div key={num} className="relative h-9">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (betMode === 'splits' && colIdx < 11) {
-                      const next = ROW_2[colIdx + 1];
-                      placeBet(`split-${num}-${next}`, 'split', `${num}/${next}`, [num, next]);
-                    } else if (betMode === 'corners' && colIdx < 11) {
-                      const n2 = ROW_3[colIdx];
-                      const n3 = ROW_2[colIdx + 1];
-                      const n4 = ROW_3[colIdx + 1];
-                      placeBet(`corner-${num}-${n2}-${n3}-${n4}`, 'corner', `Corner`, [num, n2, n3, n4]);
-                    } else {
-                      handleStraightBet(num);
-                    }
-                  }}
+                  onClick={() => handleCellClick(num)}
                   className={`w-full h-full flex items-center justify-center font-black text-xs transition-all border border-white/10 hover:brightness-125 active:scale-[0.96] ${
                     isRed
                       ? 'bg-gradient-to-b from-[#b81414] to-[#800d0d] text-white'
                       : 'bg-gradient-to-b from-[#212121] to-[#121212] text-white'
-                  } ${win ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/40 z-10' : ''}`}
+                  } ${win ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/40 z-10' : ''} ${
+                    isSelectedFirst ? 'ring-2 ring-[#f5d27a] bg-amber-400/40' : ''
+                  }`}
                 >
                   <span>{num}</span>
                 </button>
-                {bet && <ChipMarker bet={bet} />}
+                {renderCellChips(num)}
               </div>
             );
           })}
 
-          {/* Row 2 Column Bet: "2:1" */}
+          {/* Row 2 Column Bet: "2:1" (covers ROW_2 numbers) */}
           <button
             type="button"
             onClick={() => placeBet('column_2', 'column_2', '2:1 Col 2', ROW_2)}
-            className="relative h-9 flex items-center justify-center font-black text-[10px] bg-gradient-to-r from-[#032a18] to-[#021f12] text-[#f5d27a] border border-white/20 hover:brightness-125 active:scale-[0.96] transition-all rounded-r-lg"
+            className={`relative h-9 flex items-center justify-center font-black text-[10px] bg-gradient-to-r from-[#032a18] to-[#021f12] text-[#f5d27a] border border-white/20 hover:brightness-125 active:scale-[0.96] transition-all rounded-r-lg ${
+              isOutsideWin('column_2') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>2:1</span>
-            {bets['column_2'] && <ChipMarker bet={bets['column_2']} />}
+            {bets['column_2'] && <ChipMarker bet={bets['column_2']} isWinner={isBetWinner('column_2')} />}
           </button>
 
           {/* ROW 3: 1, 4, 7, ... 34 */}
-          {ROW_3.map((num, colIdx) => {
+          {ROW_3.map((num) => {
             const isRed = RED_NUMBERS.has(num);
-            const betKey = `straight-${num}`;
-            const bet = bets[betKey];
             const win = isWinning(num);
+            const isSelectedFirst = splitFirstNum === num;
 
             return (
               <div key={num} className="relative h-9">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (betMode === 'splits' && colIdx < 11) {
-                      const next = ROW_3[colIdx + 1];
-                      placeBet(`split-${num}-${next}`, 'split', `${num}/${next}`, [num, next]);
-                    } else {
-                      handleStraightBet(num);
-                    }
-                  }}
+                  onClick={() => handleCellClick(num)}
                   className={`w-full h-full flex items-center justify-center font-black text-xs transition-all border border-white/10 hover:brightness-125 active:scale-[0.96] ${
                     isRed
                       ? 'bg-gradient-to-b from-[#b81414] to-[#800d0d] text-white'
                       : 'bg-gradient-to-b from-[#212121] to-[#121212] text-white'
-                  } ${win ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/40 z-10' : ''}`}
+                  } ${win ? 'animate-pulse ring-4 ring-yellow-400 bg-yellow-400/40 z-10' : ''} ${
+                    isSelectedFirst ? 'ring-2 ring-[#f5d27a] bg-amber-400/40' : ''
+                  }`}
                 >
                   <span>{num}</span>
                 </button>
-                {bet && <ChipMarker bet={bet} />}
+                {renderCellChips(num)}
               </div>
             );
           })}
 
-          {/* Row 3 Column Bet: "2:1" */}
+          {/* Row 3 Column Bet: "2:1" (covers ROW_3 numbers) */}
           <button
             type="button"
             onClick={() => placeBet('column_1', 'column_1', '2:1 Col 1', ROW_3)}
-            className="relative h-9 flex items-center justify-center font-black text-[10px] bg-gradient-to-r from-[#032a18] to-[#021f12] text-[#f5d27a] border border-white/20 hover:brightness-125 active:scale-[0.96] transition-all rounded-r-lg"
+            className={`relative h-9 flex items-center justify-center font-black text-[10px] bg-gradient-to-r from-[#032a18] to-[#021f12] text-[#f5d27a] border border-white/20 hover:brightness-125 active:scale-[0.96] transition-all rounded-r-lg ${
+              isOutsideWin('column_1') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>2:1</span>
-            {bets['column_1'] && <ChipMarker bet={bets['column_1']} />}
+            {bets['column_1'] && <ChipMarker bet={bets['column_1']} isWinner={isBetWinner('column_1')} />}
           </button>
         </div>
 
-        {/* 2. Dozens Row (1-12, 13-24, 25-36) exactly below numbers */}
+        {/* 2. Dozens Row (1-12, 13-24, 25-36) */}
         <div className="grid grid-cols-[38px_repeat(3,1fr)_34px] gap-[1.5px] bg-[#D4AF37]/30 p-[1.5px] mt-[1.5px] rounded-lg">
           <div className="h-7" /> {/* Spacer aligned with 0 */}
           <button
@@ -262,10 +412,12 @@ export function BettingTable() {
                 Array.from({ length: 12 }, (_, i) => i + 1)
               )
             }
-            className="relative h-7 flex items-center justify-center font-black text-xs bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center font-black text-xs bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('dozen_1') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>1 - 12</span>
-            {bets['dozen_1'] && <ChipMarker bet={bets['dozen_1']} />}
+            {bets['dozen_1'] && <ChipMarker bet={bets['dozen_1']} isWinner={isBetWinner('dozen_1')} />}
           </button>
 
           <button
@@ -278,10 +430,12 @@ export function BettingTable() {
                 Array.from({ length: 12 }, (_, i) => i + 13)
               )
             }
-            className="relative h-7 flex items-center justify-center font-black text-xs bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center font-black text-xs bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('dozen_2') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>13 - 24</span>
-            {bets['dozen_2'] && <ChipMarker bet={bets['dozen_2']} />}
+            {bets['dozen_2'] && <ChipMarker bet={bets['dozen_2']} isWinner={isBetWinner('dozen_2')} />}
           </button>
 
           <button
@@ -294,10 +448,12 @@ export function BettingTable() {
                 Array.from({ length: 12 }, (_, i) => i + 25)
               )
             }
-            className="relative h-7 flex items-center justify-center font-black text-xs bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center font-black text-xs bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('dozen_3') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>25 - 36</span>
-            {bets['dozen_3'] && <ChipMarker bet={bets['dozen_3']} />}
+            {bets['dozen_3'] && <ChipMarker bet={bets['dozen_3']} isWinner={isBetWinner('dozen_3')} />}
           </button>
           <div className="h-7" /> {/* Spacer aligned with 2:1 */}
         </div>
@@ -316,10 +472,12 @@ export function BettingTable() {
                 Array.from({ length: 18 }, (_, i) => i + 1)
               )
             }
-            className="relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('low') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>1 - 18</span>
-            {bets['low'] && <ChipMarker bet={bets['low']} />}
+            {bets['low'] && <ChipMarker bet={bets['low']} isWinner={isBetWinner('low')} />}
           </button>
 
           {/* EVEN */}
@@ -333,10 +491,12 @@ export function BettingTable() {
                 Array.from({ length: 36 }, (_, i) => i + 1).filter((n) => n % 2 === 0)
               )
             }
-            className="relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('even') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>EVEN</span>
-            {bets['even'] && <ChipMarker bet={bets['even']} />}
+            {bets['even'] && <ChipMarker bet={bets['even']} isWinner={isBetWinner('even')} />}
           </button>
 
           {/* Red Diamond */}
@@ -350,10 +510,12 @@ export function BettingTable() {
                 Array.from(RED_NUMBERS)
               )
             }
-            className="relative h-7 flex items-center justify-center bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('red') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <div className="w-3.5 h-3.5 bg-gradient-to-br from-red-500 to-red-700 rotate-45 shadow-sm border border-red-400" />
-            {bets['red'] && <ChipMarker bet={bets['red']} />}
+            {bets['red'] && <ChipMarker bet={bets['red']} isWinner={isBetWinner('red')} />}
           </button>
 
           {/* Black Diamond */}
@@ -367,10 +529,12 @@ export function BettingTable() {
                 Array.from({ length: 36 }, (_, i) => i + 1).filter((n) => !RED_NUMBERS.has(n))
               )
             }
-            className="relative h-7 flex items-center justify-center bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('black') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <div className="w-3.5 h-3.5 bg-gradient-to-br from-neutral-800 to-black rotate-45 shadow-sm border border-neutral-600" />
-            {bets['black'] && <ChipMarker bet={bets['black']} />}
+            {bets['black'] && <ChipMarker bet={bets['black']} isWinner={isBetWinner('black')} />}
           </button>
 
           {/* ODD */}
@@ -384,10 +548,12 @@ export function BettingTable() {
                 Array.from({ length: 36 }, (_, i) => i + 1).filter((n) => n % 2 !== 0)
               )
             }
-            className="relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('odd') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>ODD</span>
-            {bets['odd'] && <ChipMarker bet={bets['odd']} />}
+            {bets['odd'] && <ChipMarker bet={bets['odd']} isWinner={isBetWinner('odd')} />}
           </button>
 
           {/* 19 - 36 */}
@@ -401,7 +567,9 @@ export function BettingTable() {
                 Array.from({ length: 18 }, (_, i) => i + 19)
               )
             }
-            className="relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm"
+            className={`relative h-7 flex items-center justify-center font-black text-[11px] bg-gradient-to-b from-[#063b22] to-[#032616] border border-white/10 hover:brightness-125 active:scale-[0.98] transition-all rounded-sm ${
+              isOutsideWin('high') ? 'ring-2 ring-yellow-400 bg-yellow-400/25 animate-pulse' : ''
+            }`}
           >
             <span>19 - 36</span>
             {bets['high'] && <ChipMarker bet={bets['high']} />}

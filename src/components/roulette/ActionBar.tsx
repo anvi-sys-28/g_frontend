@@ -32,6 +32,7 @@ function RouletteIcon({ className = 'w-5 h-5' }: { className?: string }) {
 
 export function ActionBar() {
   const bets = useRouletteStore((s) => s.bets);
+  const balance = useRouletteStore((s) => s.balance);
   const clearAllBets = useRouletteStore((s) => s.clearAllBets);
   const repeatBets = useRouletteStore((s) => s.repeatBets);
   const spin = useRouletteStore((s) => s.spin);
@@ -40,7 +41,12 @@ export function ActionBar() {
 
   const totalBetCount = Object.keys(bets).length;
   const isSpinning = spinState === 'spinning';
+  const isSettled = spinState === 'settled';
   const hasLastBets = Object.keys(lastRoundBets).length > 0;
+  const lastRoundTotal = Object.values(lastRoundBets).reduce((s, b) => s + b.amount, 0);
+
+  const canSpin = !isSpinning && !isSettled && totalBetCount > 0;
+  const canRepeat = !isSpinning && hasLastBets && balance >= lastRoundTotal;
 
   return (
     <div className="relative w-full max-w-[430px] mx-auto px-3 py-2 flex items-center justify-between gap-2 select-none">
@@ -59,11 +65,11 @@ export function ActionBar() {
       <button
         type="button"
         onClick={spin}
-        disabled={isSpinning || totalBetCount === 0}
+        disabled={!canSpin}
         className={`flex-1 max-w-[210px] py-3 rounded-full flex items-center justify-center gap-2 font-black text-sm uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
           isSpinning
             ? 'bg-[#333333] text-neutral-400 border border-neutral-600 animate-pulse cursor-not-allowed'
-            : totalBetCount === 0
+            : !canSpin
             ? 'bg-gradient-to-r from-[#997d3d] to-[#6b5220] text-black/60 border border-[#b89547]/40 cursor-not-allowed opacity-75'
             : 'bg-gradient-to-r from-[#F0C05A] via-[#E2A732] to-[#B37B14] hover:brightness-110 border border-[#FFF0B0] text-black shadow-[0_0_25px_rgba(226,167,50,0.55)] cursor-pointer'
         }`}
@@ -76,7 +82,7 @@ export function ActionBar() {
       <button
         type="button"
         onClick={repeatBets}
-        disabled={isSpinning || !hasLastBets}
+        disabled={!canRepeat}
         className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-black/60 backdrop-blur-md border border-[#D4AF37]/40 text-neutral-200 hover:text-white hover:border-[#D4AF37] active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all shadow-md shadow-black"
       >
         <RotateCw className="w-4 h-4 text-[#f5d27a]" />

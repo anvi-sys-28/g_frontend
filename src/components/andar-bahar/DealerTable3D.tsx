@@ -10,7 +10,7 @@ import { BarChart3 } from 'lucide-react';
  * Creates the deep red velvet table felt texture with ANDAR and BAHAR mats
  */
 function createTableFeltTexture(): THREE.CanvasTexture {
-  const size = 1024;
+  const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -20,7 +20,7 @@ function createTableFeltTexture(): THREE.CanvasTexture {
   const cy = size / 2;
 
   // 1. Deep red velvet background gradient
-  const bgGrad = ctx.createRadialGradient(cx, cy, 50, cx, cy, size * 0.5);
+  const bgGrad = ctx.createRadialGradient(cx, cy, 30, cx, cy, size * 0.5);
   bgGrad.addColorStop(0, '#7a0c1a');
   bgGrad.addColorStop(0.6, '#4f0610');
   bgGrad.addColorStop(1, '#2d0309');
@@ -29,7 +29,7 @@ function createTableFeltTexture(): THREE.CanvasTexture {
 
   // Subtle felt texture noise
   ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
-  for (let i = 0; i < 4000; i++) {
+  for (let i = 0; i < 1000; i++) {
     const rx = Math.random() * size;
     const ry = Math.random() * size;
     ctx.fillRect(rx, ry, 1.5, 1.5);
@@ -320,14 +320,15 @@ export function DealerTable3D() {
     camera.position.set(0, 5.8, 6.0);
     camera.lookAt(0, -0.4, 0);
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: typeof window !== 'undefined' ? window.devicePixelRatio < 2 : true,
       alpha: true,
-      powerPreference: 'high-performance',
-      precision: 'highp',
+      powerPreference: 'default',
+      precision: isMobile ? 'mediump' : 'highp',
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.18;
     container.appendChild(renderer.domElement);
@@ -498,6 +499,9 @@ export function DealerTable3D() {
 
     const animate = (currentTime: number) => {
       animationFrameId = requestAnimationFrame(animate);
+
+      // Skip GPU computation if tab or app is backgrounded
+      if (typeof document !== 'undefined' && document.hidden) return;
 
       const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
       lastTime = currentTime;

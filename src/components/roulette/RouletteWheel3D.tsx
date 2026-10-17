@@ -7,10 +7,10 @@ import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import { soundEffects } from '@/lib/roulette/soundEffects';
 
 /**
- * Creates an optimized 1024x1024 circular texture for the 37 European pockets
+ * Creates an optimized 512x512 circular texture for the 37 European pockets
  */
 function createWheelTexture(): THREE.CanvasTexture {
-  const size = 1024;
+  const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -137,15 +137,16 @@ export function RouletteWheel3D() {
     camera.position.copy(initialCamPos);
     camera.lookAt(0, -0.35, 0);
 
-    // High performance renderer with optimal pixel ratio (capped at 1.5)
+    // Adaptive high-performance renderer with optimal pixel ratio
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: typeof window !== 'undefined' ? window.devicePixelRatio < 2 : true,
       alpha: true,
-      powerPreference: 'high-performance',
-      precision: 'highp',
+      powerPreference: 'default',
+      precision: isMobile ? 'mediump' : 'highp',
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
@@ -340,6 +341,9 @@ export function RouletteWheel3D() {
 
     const animate = (currentTime: number) => {
       animationFrameId = requestAnimationFrame(animate);
+
+      // Skip GPU computation if tab or app is backgrounded
+      if (typeof document !== 'undefined' && document.hidden) return;
 
       const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
       lastTime = currentTime;

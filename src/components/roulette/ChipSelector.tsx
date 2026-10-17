@@ -70,8 +70,10 @@ export function ChipSelector() {
   const undoBet = useRouletteStore((s) => s.undoBet);
   const clearAllBets = useRouletteStore((s) => s.clearAllBets);
   const betHistoryStack = useRouletteStore((s) => s.betHistoryStack);
+  const spinState = useRouletteStore((s) => s.spinState);
 
-  const canUndo = betHistoryStack.length > 0;
+  const isSpinning = spinState === 'spinning';
+  const canUndo = betHistoryStack.length > 0 && !isSpinning;
 
   return (
     <div className="relative w-full max-w-[430px] mx-auto px-3 py-1 flex items-center justify-between select-none">

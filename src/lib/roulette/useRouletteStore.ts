@@ -161,7 +161,11 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
 
       soundEffects.playChipSound();
 
-      const existingBet = bets[id];
+      // If previous round was settled, start new round cleanly
+      const baseBets = spinState === 'settled' ? {} : bets;
+      const baseStack = spinState === 'settled' ? [] : betHistoryStack;
+
+      const existingBet = baseBets[id];
       const updatedChips = existingBet ? { ...existingBet.chips } : {};
       updatedChips[selectedChip] = (updatedChips[selectedChip] || 0) + 1;
 
@@ -178,9 +182,12 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       persistBalance(newBalance);
 
       set({
+        spinState: 'idle',
+        winningNumber: null,
+        spinResult: null,
         balance: newBalance,
-        bets: { ...bets, [id]: newBet },
-        betHistoryStack: [...betHistoryStack, { betId: id, chipValue: selectedChip }],
+        bets: { ...baseBets, [id]: newBet },
+        betHistoryStack: [...baseStack, { betId: id, chipValue: selectedChip }],
       });
 
       return true;
@@ -230,6 +237,18 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       const { bets, balance, spinState } = get();
       if (spinState === 'spinning') return;
 
+      if (spinState === 'settled') {
+        // Clear table view after settlement without double-refunding settled bets
+        set({
+          spinState: 'idle',
+          winningNumber: null,
+          spinResult: null,
+          bets: {},
+          betHistoryStack: [],
+        });
+        return;
+      }
+
       const totalBetAmount = Object.values(bets).reduce((acc, b) => acc + b.amount, 0);
       if (totalBetAmount === 0) return;
 
@@ -258,9 +277,7 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       soundEffects.playChipSound();
 
       const newBalance = balance - totalNeeded;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_BALANCE, String(newBalance));
-      }
+      persistBalance(newBalance);
 
       const newStack: Array<{ betId: string; chipValue: number }> = [];
       Object.values(lastRoundBets).forEach((b) => {
@@ -273,6 +290,9 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       });
 
       set({
+        spinState: 'idle',
+        winningNumber: null,
+        spinResult: null,
         balance: newBalance,
         bets: { ...lastRoundBets },
         betHistoryStack: newStack,
@@ -283,9 +303,14 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       const { bets, spinState, wheelType, fastSpin, predictMode, userPrediction } = get();
       if (spinState === 'spinning') return null;
 
+      // In settled state, must place new bets or click Repeat
+      if (spinState === 'settled') {
+        soundEffects.triggerHaptic([20, 20]);
+        return null;
+      }
+
       const activeBetsList = Object.values(bets);
       if (activeBetsList.length === 0) {
-        // Can't spin with no bets
         soundEffects.triggerHaptic([20, 20]);
         return null;
       }
@@ -324,8 +349,9 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
     },
 
     onSpinComplete: () => {
-      const { winningNumber, bets, balance, recentNumbers, spinCount } = get();
-      if (winningNumber === null) return;
+      const { winningNumber, bets, balance, recentNumbers, spinCount, spinState } = get();
+      // CRITICAL: Prevent duplicate settlement calls!
+      if (spinState !== 'spinning' || winningNumber === null) return;
 
       const activeBetsList = Object.values(bets);
       const result = evaluateSpin(winningNumber, activeBetsList);

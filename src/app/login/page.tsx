@@ -77,13 +77,19 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div className="relative min-h-[100dvh] w-full flex flex-col justify-between overflow-x-hidden overflow-y-auto bg-black select-none">
+    <div
+      className="relative min-h-[100dvh] w-full flex flex-col justify-between overflow-x-hidden overflow-y-auto bg-black select-none"
+      style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+    >
       {/* Mobile Background (< 768px): ml.webp */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/ml.webp"
         alt="Bet Adda Mobile Background"
+        fetchPriority="high"
+        decoding="async"
         className="fixed inset-0 w-full h-full object-cover object-top pointer-events-none md:hidden"
+        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
       />
 
       {/* Desktop Background (>= 768px): lb.webp */}
@@ -91,7 +97,10 @@ export default function LoginPage() {
       <img
         src="/lb.webp"
         alt="Bet Adda Desktop Background"
+        fetchPriority="high"
+        decoding="async"
         className="fixed inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none hidden md:block"
+        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
       />
 
       {/* Ambient Vignette Overlays: Subtle on mobile so luxury background artwork is clearly visible */}
@@ -118,8 +127,11 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side: Sleek, Compact Glassmorphism Login Interface */}
-        <div className="w-full max-w-[340px] sm:max-w-[370px] lg:max-w-[410px] shrink-0 mt-2 mb-6 lg:my-auto">
-          <div className="relative rounded-2xl sm:rounded-3xl bg-black/75 sm:bg-neutral-950/80 border border-amber-500/35 backdrop-blur-xl p-4 sm:p-6 lg:p-7 shadow-2xl shadow-black/90 ring-1 ring-amber-400/20">
+        <div
+          className="w-full max-w-[340px] sm:max-w-[370px] lg:max-w-[410px] shrink-0 mt-2 mb-6 lg:my-auto"
+          style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+        >
+          <div className="relative rounded-2xl sm:rounded-3xl bg-black/80 sm:bg-neutral-950/80 border border-amber-500/35 backdrop-blur-md sm:backdrop-blur-xl p-4 sm:p-6 lg:p-7 shadow-2xl shadow-black/90 ring-1 ring-amber-400/20">
             {/* Top Bet Adda Logo (Compact) */}
             <PlayinExchangeLogo compact title="BET" subtitle="ADDA" className="mb-0.5 sm:mb-1" />
 
