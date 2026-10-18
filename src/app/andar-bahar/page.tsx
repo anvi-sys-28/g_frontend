@@ -8,6 +8,7 @@ import { RecentResultsBar } from '@/components/andar-bahar/RecentResultsBar';
 import { SideSelector } from '@/components/andar-bahar/SideSelector';
 import { ChipRow } from '@/components/andar-bahar/ChipRow';
 import { DealButton } from '@/components/andar-bahar/DealButton';
+import { LiveAndarBaharBanner } from '@/components/andar-bahar/LiveAndarBaharBanner';
 import { WinnerBanner } from '@/components/andar-bahar/WinnerBanner';
 import { AndarBaharStatsSheet } from '@/components/andar-bahar/AndarBaharStatsSheet';
 import { AndarBaharSettingsModal } from '@/components/andar-bahar/AndarBaharSettingsModal';
@@ -39,6 +40,16 @@ export default function AndarBaharPage() {
   const config = useAndarBaharStore((s) => s.config);
   const toggleStats = useAndarBaharStore((s) => s.toggleStats);
   const recentResults = useAndarBaharStore((s) => s.recentResults);
+  const syncLiveTick = useAndarBaharStore((s) => s.syncLiveTick);
+
+  // Synchronous Live Andar Bahar Loop (100ms tick for sub-second precision countdown & phase syncing)
+  React.useEffect(() => {
+    syncLiveTick();
+    const interval = setInterval(() => {
+      syncLiveTick();
+    }, 100);
+    return () => clearInterval(interval);
+  }, [syncLiveTick]);
 
   // Sync with user's authentic casino coins from database and localStorage
   React.useEffect(() => {
@@ -63,6 +74,26 @@ export default function AndarBaharPage() {
           }
         })
         .catch(() => {});
+
+      // Authentic online presence heartbeat
+      const pingPresence = () => {
+        fetch('/api/casino/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: storedId, game: 'ANDAR_BAHAR' }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.andarBahar?.count !== undefined) {
+              useAndarBaharStore.setState({ activePlayersCount: data.andarBahar.count });
+            }
+          })
+          .catch(() => {});
+      };
+
+      pingPresence();
+      const pInterval = setInterval(pingPresence, 5000);
+      return () => clearInterval(pInterval);
     } catch {}
   }, []);
 
@@ -188,6 +219,9 @@ export default function AndarBaharPage() {
       <div className="relative w-full h-[42vh] sm:h-[370px] bg-transparent shrink-0 overflow-hidden">
         <DealerTable3D />
       </div>
+
+      {/* Synchronized Live Round Countdown & Status Banner */}
+      <LiveAndarBaharBanner />
 
       {/* 4. Recent Results Bar */}
       <RecentResultsBar />

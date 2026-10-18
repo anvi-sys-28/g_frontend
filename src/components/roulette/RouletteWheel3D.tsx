@@ -361,8 +361,8 @@ export function RouletteWheel3D() {
           spinDuration = duration;
           wheelStartAngle = currentWheelAngle;
 
-          // Wheel makes 3.5 smooth counter-clockwise turns
-          wheelTotalDelta = -(Math.PI * 2 * (fastSpin ? 1.5 : 3.5));
+          // Wheel makes 7.5 smooth counter-clockwise turns (fast vigorous start, long realistic glide)
+          wheelTotalDelta = -(Math.PI * 2 * (fastSpin ? 2.5 : 7.5));
           const finalWheelAngle = wheelStartAngle + wheelTotalDelta;
 
           // Target pocket local angle on wheel rotor
@@ -377,8 +377,8 @@ export function RouletteWheel3D() {
 
           // Ball initial launch angle (opposite direction)
           ballStartAngle = currentBallAngle;
-          // 11 full revolutions for fast initial launch and long suspenseful deceleration
-          const fullRevolutions = fastSpin ? 4 : 11;
+          // 15 full revolutions for rapid, energetic initial launch and long dramatic casino deceleration
+          const fullRevolutions = fastSpin ? 5 : 15;
 
           // Calculate exact travel so ball arrives precisely at targetFinalWorldAngle
           let angleDiff = (targetFinalWorldAngle - ballStartAngle) % (Math.PI * 2);
@@ -414,13 +414,13 @@ export function RouletteWheel3D() {
             onSpinComplete();
           }
         } else {
-          // Smooth quartic ease-out for wheel: starts fast, slows down gently
-          const wheelEase = 1 - Math.pow(1 - p, 3.2);
+          // Smooth quartic ease-out for wheel: starts exceptionally fast, glides and slows down very smoothly
+          const wheelEase = 1 - Math.pow(1 - p, 3.8);
           currentWheelAngle = wheelStartAngle + wheelTotalDelta * wheelEase;
           rotorGroup.rotation.y = currentWheelAngle;
 
           // Smooth continuous deceleration for ball:
-          const ballEase = 1 - Math.pow(1 - p, 3.0);
+          const ballEase = 1 - Math.pow(1 - p, 3.4);
           currentBallAngle = ballStartAngle + ballTotalTravel * ballEase;
 
           // Ball Radius and Height Phases (Over 9.5 seconds of dramatic casino motion):

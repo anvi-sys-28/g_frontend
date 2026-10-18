@@ -64,7 +64,7 @@ export function LiveCountdownBanner() {
           {/* Active Online Players Badge */}
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-bold text-neutral-300">
             <Users className="w-3 h-3 text-[#f5d27a]" />
-            <span>{activePlayersCount || 24} Online</span>
+            <span>{activePlayersCount || 1} Online</span>
           </div>
         </div>
 
@@ -185,19 +185,23 @@ export function LiveCountdownBanner() {
         )}
 
         {/* Live Multiplayer Ticker / Least-Chosen Feedback */}
-        {roomBets && roomBets.length > 0 && (
-          <div className="mt-1.5 pt-1.5 border-t border-white/5 flex items-center gap-1 overflow-x-auto no-scrollbar text-[9px] text-neutral-400 whitespace-nowrap">
-            <span className="font-bold text-[#f5d27a] shrink-0">Live Room:</span>
-            {roomBets.slice(0, 4).map((rb, idx) => (
+        <div className="mt-1.5 pt-1.5 border-t border-white/5 flex items-center gap-1 overflow-x-auto no-scrollbar text-[9px] text-neutral-400 whitespace-nowrap">
+          <span className="font-bold text-[#f5d27a] shrink-0">Live Room:</span>
+          {roomBets && roomBets.length > 0 ? (
+            roomBets.slice(0, 4).map((rb, idx) => (
               <span
                 key={`${rb.playerId}-${idx}`}
                 className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 shrink-0"
               >
                 <strong className="text-white font-semibold">{rb.playerName}:</strong> {rb.label} ({rb.amount})
               </span>
-            ))}
-          </div>
-        )}
+            ))
+          ) : (
+            <span className="text-neutral-500 italic">
+              Round #{liveRoundId || 101} active • Select chips to place your live bet
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

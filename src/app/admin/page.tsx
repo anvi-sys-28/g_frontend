@@ -28,6 +28,9 @@ import {
   LogOut,
   Lock,
   KeyRound,
+  Activity,
+  Flame,
+  Target,
 } from 'lucide-react';
 
 interface CasinoUserStat {
@@ -145,6 +148,9 @@ export default function CasinoAdminPage() {
   const [allotNote, setAllotNote] = useState('Admin allotment refill');
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Live Games Monitoring State
+  const [liveGamesData, setLiveGamesData] = useState<any>(null);
+
   // Fetch Users & Requests
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
@@ -170,6 +176,25 @@ export default function CasinoAdminPage() {
       setIsRefreshing(false);
     }
   }, []);
+
+  // Fetch Live Casino Games State
+  const fetchLiveGames = useCallback(async () => {
+    try {
+      const res = await fetch('/api/casino/admin/live-games');
+      if (res.ok) {
+        const data = await res.json();
+        setLiveGamesData(data);
+      }
+    } catch {}
+  }, []);
+
+  // Poll live games continuously
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
+    fetchLiveGames();
+    const interval = setInterval(fetchLiveGames, 1500);
+    return () => clearInterval(interval);
+  }, [isAdminAuthenticated, fetchLiveGames]);
 
   // Check admin session on mount
   useEffect(() => {
@@ -660,6 +685,22 @@ export default function CasinoAdminPage() {
                 </span>
               )}
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('games')}
+              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${
+                activeTab === 'games'
+                  ? 'bg-amber-400 text-black shadow-lg shadow-amber-500/20'
+                  : 'bg-neutral-900/70 text-neutral-400 hover:text-white border border-white/5'
+              }`}
+            >
+              <Gamepad2 className="w-4 h-4" />
+              <span>Live Games Monitor</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-black animate-pulse">
+                LIVE
+              </span>
+            </button>
           </div>
 
           {activeTab === 'users' && (
@@ -969,6 +1010,283 @@ export default function CasinoAdminPage() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 3: LIVE CASINO GAMES MONITOR */}
+        {activeTab === 'games' && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* Live Indicator Header Banner */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-neutral-900/90 border border-emerald-500/30 backdrop-blur-xl shadow-lg">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    Universal Real-Time Games Feed
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-mono font-bold">
+                      20s Cycle Active
+                    </span>
+                  </h2>
+                  <p className="text-[11px] text-neutral-400">
+                    Showing authentic active player wagers, online counts, and algorithmic least-chosen targets where results will fall.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto text-xs font-mono text-neutral-400">
+                <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>Live Refresh: 1.5s</span>
+              </div>
+            </div>
+
+            {/* TWO GAME MONITORS: ROULETTE & ANDAR BAHAR */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* GAME 1: EUROPEAN ROULETTE MONITOR */}
+              <div className="rounded-3xl bg-neutral-900/70 border border-amber-500/30 backdrop-blur-xl p-5 space-y-4 shadow-xl">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 text-black flex items-center justify-center font-black shadow-md">
+                      <Dices className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-white">Live European Roulette</h3>
+                      <div className="flex items-center gap-2 text-[10px] text-neutral-400">
+                        <span>Round #{liveGamesData?.roulette?.roundId || 89615865}</span>
+                        <span>•</span>
+                        <span className="capitalize font-bold text-amber-300">
+                          {liveGamesData?.roulette?.phase || 'betting'} phase
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end">
+                    <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-3 h-3" />
+                      {liveGamesData?.roulette?.onlineCount || 1} Online
+                    </span>
+                    <span className="text-[10px] font-mono text-neutral-400 mt-1">
+                      {liveGamesData?.roulette?.timeRemaining?.toFixed(1) || '4.0'}s remaining
+                    </span>
+                  </div>
+                </div>
+
+                {/* HERO TARGET FALL NUMBER DISPLAY */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-950/40 via-black/80 to-amber-950/30 border-2 border-amber-500/60 shadow-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-amber-400" />
+                      Algorithm Target (Least Chosen Ball Pocket)
+                    </span>
+                    <span className="text-[9px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-bold">
+                      House Margin Protected
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 text-black font-black text-3xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+                      {liveGamesData?.roulette?.targetWinningNumber !== undefined
+                        ? liveGamesData.roulette.targetWinningNumber
+                        : 2}
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm font-black text-white block">
+                        Ball Falling on Pocket #{liveGamesData?.roulette?.targetWinningNumber !== undefined ? liveGamesData.roulette.targetWinningNumber : 2}
+                      </span>
+                      <p className="text-[11px] text-neutral-300 leading-snug mt-0.5">
+                        {liveGamesData?.roulette?.explanation || 'Calculated deterministically from active real player wagers.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CURRENT ROUND WAGERS TABLE */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-neutral-300">Active Bets Placed in Round:</span>
+                    <span className="text-amber-400 font-mono font-bold">
+                      Total Wager: {liveGamesData?.roulette?.totalCurrentWager || 0} Coins
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-black/50 overflow-hidden">
+                    {liveGamesData?.roulette?.currentRoundBets && liveGamesData.roulette.currentRoundBets.length > 0 ? (
+                      <table className="w-full text-left text-[11px]">
+                        <thead>
+                          <tr className="border-b border-white/10 bg-white/5 text-neutral-400 font-semibold">
+                            <th className="py-2 px-3">Player</th>
+                            <th className="py-2 px-3">Numbers Bet</th>
+                            <th className="py-2 px-3 text-right">Coins</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {liveGamesData.roulette.currentRoundBets.map((b: any, i: number) => (
+                            <tr key={i} className="hover:bg-white/5">
+                              <td className="py-2 px-3 font-bold text-white">{b.playerName}</td>
+                              <td className="py-2 px-3 font-mono text-amber-300">{b.label}</td>
+                              <td className="py-2 px-3 text-right font-mono font-bold text-white">
+                                {b.amount}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="p-4 text-center text-xs text-neutral-500 italic">
+                        No player bets placed yet in current round. Waiting for player coins...
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* GAME AGGREGATE STATS */}
+                <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/5">
+                    <span className="text-[10px] text-neutral-400 block font-bold">Total Rounds</span>
+                    <span className="font-mono font-black text-sm text-white">
+                      {liveGamesData?.roulette?.stats?.totalGames || 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/5">
+                    <span className="text-[10px] text-neutral-400 block font-bold">Total Wagered</span>
+                    <span className="font-mono font-black text-sm text-amber-300">
+                      {liveGamesData?.roulette?.stats?.totalWagered || 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/5">
+                    <span className="text-[10px] text-neutral-400 block font-bold">House Margin</span>
+                    <span className="font-mono font-black text-sm text-emerald-400">
+                      +{liveGamesData?.roulette?.stats?.houseProfit || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* GAME 2: ANDAR BAHAR MONITOR */}
+              <div className="rounded-3xl bg-neutral-900/70 border border-amber-500/30 backdrop-blur-xl p-5 space-y-4 shadow-xl">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 text-white flex items-center justify-center font-black shadow-md">
+                      <Flame className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-white">Live Andar Bahar</h3>
+                      <div className="flex items-center gap-2 text-[10px] text-neutral-400">
+                        <span>Round #{liveGamesData?.andarBahar?.roundId || 89615865}</span>
+                        <span>•</span>
+                        <span className="capitalize font-bold text-amber-300">
+                          {liveGamesData?.andarBahar?.phase || 'betting'} phase
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end">
+                    <span className="px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-3 h-3" />
+                      {liveGamesData?.andarBahar?.onlineCount || 1} Online
+                    </span>
+                    <span className="text-[10px] font-mono text-neutral-400 mt-1">
+                      {liveGamesData?.andarBahar?.timeRemaining?.toFixed(1) || '4.0'}s remaining
+                    </span>
+                  </div>
+                </div>
+
+                {/* HERO TARGET WINNING SIDE DISPLAY */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-red-950/40 via-black/80 to-amber-950/30 border-2 border-red-500/60 shadow-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-red-400 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-red-400" />
+                      Algorithm Target (Least Chosen Side)
+                    </span>
+                    <span className="text-[9px] font-mono bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30 font-bold">
+                      House Margin Protected
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-500 to-amber-500 text-white font-black text-xl flex items-center justify-center shadow-lg shadow-red-500/30 uppercase">
+                      {liveGamesData?.andarBahar?.targetWinningSide || 'BAHAR'}
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-sm font-black text-white block">
+                        Matching Card Lands on {liveGamesData?.andarBahar?.targetWinningSide || 'BAHAR'}
+                      </span>
+                      <p className="text-[11px] text-neutral-300 leading-snug mt-0.5">
+                        {liveGamesData?.andarBahar?.explanation || 'Target side calculated automatically to protect house profit.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ANDAR VS BAHAR REAL WAGERS BAR */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-neutral-300">Live Pool Distribution:</span>
+                    <div className="flex items-center gap-3 text-[11px] font-mono font-bold">
+                      <span className="text-red-400">ANDAR: {liveGamesData?.andarBahar?.andarTotalWager || 0}</span>
+                      <span className="text-blue-400">BAHAR: {liveGamesData?.andarBahar?.baharTotalWager || 0}</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-black/50 overflow-hidden">
+                    {liveGamesData?.andarBahar?.currentRoundBets && liveGamesData.andarBahar.currentRoundBets.length > 0 ? (
+                      <table className="w-full text-left text-[11px]">
+                        <thead>
+                          <tr className="border-b border-white/10 bg-white/5 text-neutral-400 font-semibold">
+                            <th className="py-2 px-3">Player</th>
+                            <th className="py-2 px-3">Chosen Side</th>
+                            <th className="py-2 px-3 text-right">Coins</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {liveGamesData.andarBahar.currentRoundBets.map((b: any, i: number) => (
+                            <tr key={i} className="hover:bg-white/5">
+                              <td className="py-2 px-3 font-bold text-white">{b.playerName}</td>
+                              <td className="py-2 px-3 font-mono font-bold text-amber-300">{b.side}</td>
+                              <td className="py-2 px-3 text-right font-mono font-bold text-white">
+                                {b.amount}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="p-4 text-center text-xs text-neutral-500 italic">
+                        No player bets placed yet in current round. Waiting for player wagers...
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* GAME AGGREGATE STATS */}
+                <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/5">
+                    <span className="text-[10px] text-neutral-400 block font-bold">Total Rounds</span>
+                    <span className="font-mono font-black text-sm text-white">
+                      {liveGamesData?.andarBahar?.stats?.totalGames || 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/5">
+                    <span className="text-[10px] text-neutral-400 block font-bold">Total Wagered</span>
+                    <span className="font-mono font-black text-sm text-amber-300">
+                      {liveGamesData?.andarBahar?.stats?.totalWagered || 0}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/5">
+                    <span className="text-[10px] text-neutral-400 block font-bold">House Margin</span>
+                    <span className="font-mono font-black text-sm text-emerald-400">
+                      +{liveGamesData?.andarBahar?.stats?.houseProfit || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

@@ -59,97 +59,11 @@ function seededRandom(seed: number, salt: number = 0): number {
 }
 
 /**
- * Generates realistic room players betting for the round (matching the user's prompt specification)
+ * Real room bets formatted from active player sessions
  */
-export function getSimulatedRoomBets(roundId: number): RoomPlayerBet[] {
-  // Base players matching the user's exact prompt example
-  // Player A: 1, 12, 15
-  // Player B: 1, 2
-  // Player C: 1, 5
-  // Player D: 1, 12, 15
-  const pool = [
-    {
-      playerId: 'sim_p_a',
-      playerName: 'Player A (VIP)',
-      avatarColor: '#D4AF37',
-      numbers: [1, 12, 15],
-      amount: 200,
-      label: 'Straight [1, 12, 15]',
-    },
-    {
-      playerId: 'sim_p_b',
-      playerName: 'Player B (Lucky)',
-      avatarColor: '#3b82f6',
-      numbers: [1, 2],
-      amount: 100,
-      label: 'Straight [1, 2]',
-    },
-    {
-      playerId: 'sim_p_c',
-      playerName: 'Player C (Royal)',
-      avatarColor: '#ec4899',
-      numbers: [1, 5],
-      amount: 150,
-      label: 'Straight [1, 5]',
-    },
-    {
-      playerId: 'sim_p_d',
-      playerName: 'Player D (Pro)',
-      avatarColor: '#10b981',
-      numbers: [1, 12, 15],
-      amount: 250,
-      label: 'Straight [1, 12, 15]',
-    },
-  ];
-
-  // For rounds with even roundId, use the canonical A, B, C, D distribution
-  // For other rounds, vary the numbers slightly while keeping realistic multi-player distribution
-  if (roundId % 2 === 0) {
-    return pool;
-  }
-
-  // Alternate round distribution
-  const shift = (roundId * 7) % 30;
-  const n1 = (1 + shift) % 36 + 1;
-  const n2 = (2 + shift) % 36 + 1;
-  const n3 = (12 + shift) % 36 + 1;
-  const n4 = (15 + shift) % 36 + 1;
-  const n5 = (5 + shift) % 36 + 1;
-
-  return [
-    {
-      playerId: 'sim_p_a',
-      playerName: 'Player A (VIP)',
-      avatarColor: '#D4AF37',
-      numbers: [n1, n3, n4],
-      amount: 200,
-      label: `Straight [${n1}, ${n3}, ${n4}]`,
-    },
-    {
-      playerId: 'sim_p_b',
-      playerName: 'Player B (Lucky)',
-      avatarColor: '#3b82f6',
-      numbers: [n1, n2],
-      amount: 100,
-      label: `Straight [${n1}, ${n2}]`,
-    },
-    {
-      playerId: 'sim_p_c',
-      playerName: 'Player C (Royal)',
-      avatarColor: '#ec4899',
-      numbers: [n1, n5],
-      amount: 150,
-      label: `Straight [${n1}, ${n5}]`,
-    },
-    {
-      playerId: 'sim_p_d',
-      playerName: 'Player D (Pro)',
-      avatarColor: '#10b981',
-      numbers: [n1, n3, n4],
-      amount: 250,
-      label: `Straight [${n1}, ${n3}, ${n4}]`,
-    },
-  ];
+export function getSimulatedRoomBets(_roundId: number): RoomPlayerBet[] {
+  // Returns empty by default; real multiplayer bets are populated by API and active player state
+  return [];
 }
 
 /**
@@ -236,7 +150,8 @@ export function computeLeastChosenWinningNumber(
  */
 export function getLiveRoundState(
   nowMs: number = Date.now(),
-  localPlayerBets: { numbers: number[]; amount: number }[] = []
+  localPlayerBets: { numbers: number[]; amount: number }[] = [],
+  roomBetsInput?: RoomPlayerBet[]
 ): LiveRoundInfo {
   const roundId = Math.floor(nowMs / LIVE_TIMING.TOTAL_CYCLE_MS);
   const cycleOffset = nowMs % LIVE_TIMING.TOTAL_CYCLE_MS;
@@ -270,7 +185,7 @@ export function getLiveRoundState(
   const phaseProgress = Math.min(Math.max(elapsedInPhaseMs / phaseTotalMs, 0), 1.0);
 
   // Combine room bets + local player bets to calculate outcome
-  const roomBets = getSimulatedRoomBets(roundId);
+  const roomBets = roomBetsInput || [];
   const combinedBets = [
     ...roomBets.map((rb) => ({ numbers: rb.numbers, amount: rb.amount })),
     ...localPlayerBets,
@@ -296,6 +211,6 @@ export function getLiveRoundState(
     leastChosenNumbers: outcome.leastChosenNumbers,
     unchosenNumbers: outcome.unchosenNumbers,
     roomBets,
-    activePlayersCount: roomBets.length + (localPlayerBets.length > 0 ? 1 : 0) + 18,
+    activePlayersCount: Math.max(1, roomBets.length + (localPlayerBets.length > 0 ? 1 : 0)),
   };
 }

@@ -59,8 +59,10 @@ export function ChipRow() {
   const selectedChip = useAndarBaharStore((s) => s.selectedChip);
   const setSelectedChip = useAndarBaharStore((s) => s.setSelectedChip);
   const gameState = useAndarBaharStore((s) => s.gameState);
+  const isLiveMode = useAndarBaharStore((s) => s.isLiveMode);
+  const livePhase = useAndarBaharStore((s) => s.livePhase);
 
-  const disabled = gameState === 'dealing';
+  const disabled = gameState === 'dealing' || (isLiveMode && livePhase !== 'betting');
 
   return (
     <div className="relative w-full max-w-[430px] mx-auto px-3 py-1.5 select-none">

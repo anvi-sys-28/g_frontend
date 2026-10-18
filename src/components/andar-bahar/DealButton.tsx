@@ -25,24 +25,45 @@ function CardsIcon({ className = 'w-5 h-5' }: { className?: string }) {
 
 export function DealButton() {
   const selectedChip = useAndarBaharStore((s) => s.selectedChip);
+  const selectedSide = useAndarBaharStore((s) => s.selectedSide);
   const gameState = useAndarBaharStore((s) => s.gameState);
   const dealRound = useAndarBaharStore((s) => s.dealRound);
+  const isLiveMode = useAndarBaharStore((s) => s.isLiveMode);
+  const livePhase = useAndarBaharStore((s) => s.livePhase);
+  const liveTimeRemaining = useAndarBaharStore((s) => s.liveTimeRemaining);
   const balance = useGameStore((s) => s.balance);
 
-  const isDealing = gameState === 'dealing';
+  const isDealing = gameState === 'dealing' || (isLiveMode && livePhase === 'dealing');
   const hasInsufficientBalance = balance < selectedChip;
+
+  let buttonText = `DEAL ANDAR BAHAR (${selectedChip} COINS)`;
+  if (isLiveMode) {
+    if (livePhase === 'betting') {
+      buttonText = `LOCKS IN ${Math.ceil(liveTimeRemaining)}s • ${selectedChip} ON ${selectedSide}`;
+    } else if (livePhase === 'dealing') {
+      buttonText = `DEALING CARDS... (${liveTimeRemaining.toFixed(1)}s)`;
+    } else {
+      buttonText = 'ROUND SETTLED';
+    }
+  } else if (isDealing) {
+    buttonText = 'Dealing Cards...';
+  } else if (hasInsufficientBalance) {
+    buttonText = `Out of Coins (${balance} < ${selectedChip})`;
+  }
 
   return (
     <div className="relative w-full max-w-[430px] mx-auto px-3 pt-2 pb-24 sm:pb-3 select-none">
       <button
         type="button"
-        disabled={isDealing || hasInsufficientBalance}
-        onClick={dealRound}
+        disabled={isDealing || hasInsufficientBalance || (isLiveMode && livePhase !== 'betting')}
+        onClick={isLiveMode ? undefined : dealRound}
         className={`relative w-full py-3.5 rounded-2xl flex items-center justify-center gap-2.5 font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95 ${
           isDealing
             ? 'bg-neutral-800 text-neutral-400 border border-neutral-700 animate-pulse cursor-not-allowed'
             : hasInsufficientBalance
             ? 'bg-red-950/70 border border-red-500/40 text-red-300 cursor-not-allowed opacity-90'
+            : isLiveMode && livePhase === 'betting'
+            ? 'bg-gradient-to-r from-[#e5b842] via-[#ffd269] to-[#b3821a] border border-[#fff2b2] text-black shadow-[0_0_25px_rgba(229,184,66,0.5)] cursor-default'
             : 'bg-gradient-to-r from-[#e5b842] via-[#ffd269] to-[#b3821a] hover:brightness-110 border border-[#fff2b2] text-black shadow-[0_0_25px_rgba(229,184,66,0.5)] cursor-pointer'
         }`}
       >
@@ -52,11 +73,7 @@ export function DealButton() {
         <CardsIcon className={`w-4 h-4 stroke-[2.5] ${isDealing ? 'animate-spin text-neutral-400' : 'text-black'}`} />
 
         <span className="font-extrabold drop-shadow">
-          {isDealing
-            ? 'Dealing Cards...'
-            : hasInsufficientBalance
-            ? `Out of Coins (${balance} < ${selectedChip})`
-            : `DEAL ANDAR BAHAR (${selectedChip} COINS)`}
+          {buttonText}
         </span>
 
         <span className="text-[#a16207] text-sm select-none">❖</span>

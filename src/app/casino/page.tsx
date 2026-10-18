@@ -62,13 +62,18 @@ export default function CasinoPage() {
     try {
       const stored = localStorage.getItem('playin_user_id');
       const storedRole = localStorage.getItem('playin_role');
+      const localCoins = localStorage.getItem('playin_user_coins');
       if (stored) currentId = stored;
       if (storedRole) setRole(storedRole);
+      if (localCoins && !isNaN(Number(localCoins))) {
+        setCoins(Number(localCoins));
+      }
     } catch {}
 
     setUserId(currentId);
 
     try {
+      // 1. Fetch latest authoritative user balance from persistent server API
       const res = await fetch(`/api/casino/auth?userId=${encodeURIComponent(currentId)}`);
       if (res.ok) {
         const data = await res.json();
@@ -76,20 +81,24 @@ export default function CasinoPage() {
           setCoins(data.user.coins);
           setRole(data.user.role);
           setPendingRequest(data.user.pendingRequest || null);
+          try {
+            localStorage.setItem('playin_user_coins', String(data.user.coins));
+          } catch {}
         }
       }
 
-      // Fetch authentic real user count from backend
+      // 2. Fetch authentic real-time presence counts from server (no dummy numbers)
       try {
-        const uRes = await fetch('/api/casino/admin/users');
-        if (uRes.ok) {
-          const uData = await uRes.json();
-          const list: any[] = uData.users || [];
-          const rCount = list.filter((u) => (u.gamesBreakdown?.roulette ?? 0) > 0).length;
-          const abCount = list.filter((u) => (u.gamesBreakdown?.andarBahar ?? 0) > 0).length;
+        const pRes = await fetch('/api/casino/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentId, game: 'LOUNGE' }),
+        });
+        if (pRes.ok) {
+          const pData = await pRes.json();
           setRealPlayers({
-            roulette: Math.max(1, rCount || Math.ceil(list.length / 2) || 1),
-            andarBahar: Math.max(1, abCount || Math.floor(list.length / 2) || 1),
+            roulette: Math.max(1, pData?.roulette?.count || 1),
+            andarBahar: Math.max(1, pData?.andarBahar?.count || 1),
           });
         }
       } catch {}
@@ -102,6 +111,16 @@ export default function CasinoPage() {
 
   useEffect(() => {
     fetchUserData();
+
+    // Re-fetch immediately when user refocuses tab or navigates back from a game
+    const handleFocus = () => fetchUserData();
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [fetchUserData]);
 
   // Request Coins Handler

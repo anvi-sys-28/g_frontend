@@ -81,6 +81,26 @@ export default function RoulettePage() {
           }
         })
         .catch(() => {});
+
+      // Authentic online presence heartbeat
+      const pingPresence = () => {
+        fetch('/api/casino/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: storedId, game: 'ROULETTE' }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.roulette?.count !== undefined) {
+              useRouletteStore.setState({ activePlayersCount: data.roulette.count });
+            }
+          })
+          .catch(() => {});
+      };
+
+      pingPresence();
+      const pInterval = setInterval(pingPresence, 5000);
+      return () => clearInterval(pInterval);
     } catch {}
     if (typeof window !== 'undefined') {
       (window as any).__useRouletteStore = useRouletteStore;

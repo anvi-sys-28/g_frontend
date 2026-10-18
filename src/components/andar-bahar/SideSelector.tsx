@@ -8,8 +8,10 @@ export function SideSelector() {
   const setSelectedSide = useAndarBaharStore((s) => s.setSelectedSide);
   const gameState = useAndarBaharStore((s) => s.gameState);
   const config = useAndarBaharStore((s) => s.config);
+  const isLiveMode = useAndarBaharStore((s) => s.isLiveMode);
+  const livePhase = useAndarBaharStore((s) => s.livePhase);
 
-  const disabled = gameState === 'dealing';
+  const disabled = gameState === 'dealing' || (isLiveMode && livePhase !== 'betting');
   const multiplierText = `(${config.payoutMultiplier}x)`;
 
   return (

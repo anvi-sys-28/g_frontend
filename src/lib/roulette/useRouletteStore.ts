@@ -13,6 +13,7 @@ import {
   RoomPlayerBet,
 } from './liveRouletteSync';
 import { soundEffects } from './soundEffects';
+import { useGameStore } from '../shared/useGameStore';
 
 export interface RouletteStoreState {
   // Financial State
@@ -411,14 +412,23 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
               body: JSON.stringify({
                 roundId: liveState.roundId,
                 userId,
-                playerName: 'You',
+                playerName: userId,
                 bets: activeBetsList.map((b) => ({
                   numbers: b.numbers,
                   amount: b.amount,
                   label: b.label,
                 })),
               }),
-            }).catch(() => {});
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data?.newBalance !== undefined) {
+                  persistBalance(data.newBalance);
+                  useGameStore.getState().resetBalance(data.newBalance);
+                  set({ balance: data.newBalance });
+                }
+              })
+              .catch(() => {});
           }
           return;
         } else if (liveState.phase === 'settled') {
@@ -429,8 +439,42 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
           const updatedRecent = [winningNum, ...recentNumbers.slice(0, 19)];
 
           persistBalance(newBal);
+          useGameStore.getState().resetBalance(newBal);
+
           if (typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEY_RECENT, JSON.stringify(updatedRecent));
+            const userId = localStorage.getItem('playin_user_id') || 'local_vip';
+
+            // Settle with server API to persist real coins in database/store!
+            fetch('/api/casino/roulette/settle', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                roundId: liveState.roundId,
+                userId,
+                playerName: userId,
+                winningNumber: winningNum,
+                payout: settlement.totalPayout,
+                won: settlement.totalPayout > 0,
+                details: {
+                  totalWager: settlement.totalWager,
+                  winningBets: settlement.winningBets.map((wb) => ({
+                    label: wb.label,
+                    amount: wb.wager,
+                    payout: wb.payout,
+                  })),
+                },
+              }),
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data?.newBalance !== undefined) {
+                  persistBalance(data.newBalance);
+                  useGameStore.getState().resetBalance(data.newBalance);
+                  set({ balance: data.newBalance });
+                }
+              })
+              .catch(() => {});
           }
 
           if (settlement.totalPayout > 0) {
