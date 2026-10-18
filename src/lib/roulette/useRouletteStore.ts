@@ -5,9 +5,13 @@ import {
   SpinResult,
   WheelType,
   evaluateSpin,
-  getRandomWinningNumber,
   EUROPEAN_NUMBERS,
 } from './rouletteEngine';
+import {
+  getLiveRoundState,
+  computeLeastChosenWinningNumber,
+  RoomPlayerBet,
+} from './liveRouletteSync';
 import { soundEffects } from './soundEffects';
 
 export interface RouletteStoreState {
@@ -29,6 +33,19 @@ export interface RouletteStoreState {
   // 3D Animation targets
   targetWinningPocketIndex: number; // index in EUROPEAN_NUMBERS
   spinStartTime: number;
+  spinDuration: number; // 9.5s for realistic suspense
+
+  // Live Multiplayer Synchronized Engine
+  isLiveMode: boolean;
+  liveRoundId: number;
+  livePhase: 'betting' | 'spinning' | 'settled';
+  liveTimeRemaining: number;
+  livePhaseProgress: number;
+  activePlayersCount: number;
+  roomBets: RoomPlayerBet[];
+  numberBetCounts: Record<number, number>;
+  leastChosenNumbers: number[];
+  syncOffsetMs: number;
 
   // Audio & Settings
   isSoundMuted: boolean;
@@ -37,7 +54,7 @@ export interface RouletteStoreState {
 
   // Gamification & University Probability Lab
   predictMode: boolean;
-  userPrediction: number; // e.g. estimated probability 0-100
+  userPrediction: number; // estimated probability 0-100
   playerXp: number;
   playerLevel: number;
   spinCount: number;
@@ -50,6 +67,8 @@ export interface RouletteStoreState {
   repeatBets: () => void;
   spin: () => Promise<number | null>;
   onSpinComplete: () => void;
+  syncLiveTick: (nowMs?: number) => void;
+  setLiveMode: (live: boolean) => void;
   toggleSound: () => void;
   toggleStats: (open?: boolean) => void;
   toggleSettings: (open?: boolean) => void;
@@ -99,7 +118,6 @@ function getInitialRecentNumbers(): number[] {
       } catch {}
     }
   }
-  // Default matching screenshot reference
   return [32, 15, 7, 28, 12, 4, 21, 2, 25, 17];
 }
 
@@ -116,6 +134,7 @@ function getInitialXp(): { xp: number; level: number } {
 
 export const useRouletteStore = create<RouletteStoreState>((set, get) => {
   const initXp = getInitialXp();
+  const initialLive = getLiveRoundState(Date.now(), []);
 
   return {
     balance: getInitialBalance(),
@@ -124,15 +143,28 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
     betHistoryStack: [],
     lastRoundBets: {},
 
-    spinState: 'idle',
-    winningNumber: null,
+    spinState: initialLive.phase === 'spinning' ? 'spinning' : initialLive.phase === 'settled' ? 'settled' : 'idle',
+    winningNumber: initialLive.phase !== 'betting' ? initialLive.winningNumber : null,
     spinResult: null,
     recentNumbers: getInitialRecentNumbers(),
     wheelType: 'european',
     fastSpin: false,
 
-    targetWinningPocketIndex: 0,
-    spinStartTime: 0,
+    targetWinningPocketIndex: initialLive.winningPocketIndex,
+    spinStartTime: Date.now() - (initialLive.elapsedInPhase * 1000),
+    spinDuration: 9.5,
+
+    // Live Synchronized Defaults
+    isLiveMode: true,
+    liveRoundId: initialLive.roundId,
+    livePhase: initialLive.phase,
+    liveTimeRemaining: initialLive.timeRemaining,
+    livePhaseProgress: initialLive.phaseProgress,
+    activePlayersCount: initialLive.activePlayersCount,
+    roomBets: initialLive.roomBets,
+    numberBetCounts: initialLive.numberBetCounts,
+    leastChosenNumbers: initialLive.leastChosenNumbers,
+    syncOffsetMs: 0,
 
     isSoundMuted: false,
     statsOpen: false,
@@ -150,11 +182,16 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
     },
 
     placeBet: (id: string, type: BetType, label: string, numbers: number[]) => {
-      const { balance, selectedChip, bets, betHistoryStack, spinState } = get();
+      const { balance, selectedChip, bets, betHistoryStack, spinState, isLiveMode, livePhase } = get();
+
+      // In Live Mode: betting board is strictly locked after 5 seconds!
+      if (isLiveMode && livePhase !== 'betting') {
+        soundEffects.triggerHaptic([25, 25]);
+        return false;
+      }
 
       if (spinState === 'spinning') return false;
       if (balance < selectedChip) {
-        // Insufficient funds
         soundEffects.triggerHaptic([30, 30]);
         return false;
       }
@@ -194,7 +231,8 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
     },
 
     undoBet: () => {
-      const { bets, betHistoryStack, balance, spinState } = get();
+      const { bets, betHistoryStack, balance, spinState, isLiveMode, livePhase } = get();
+      if (isLiveMode && livePhase !== 'betting') return;
       if (spinState === 'spinning' || betHistoryStack.length === 0) return;
 
       const lastAction = betHistoryStack[betHistoryStack.length - 1];
@@ -234,11 +272,11 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
     },
 
     clearAllBets: () => {
-      const { bets, balance, spinState } = get();
+      const { bets, balance, spinState, isLiveMode, livePhase } = get();
+      if (isLiveMode && livePhase !== 'betting') return;
       if (spinState === 'spinning') return;
 
       if (spinState === 'settled') {
-        // Clear table view after settlement without double-refunding settled bets
         set({
           spinState: 'idle',
           winningNumber: null,
@@ -265,7 +303,8 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
     },
 
     repeatBets: () => {
-      const { lastRoundBets, balance, spinState } = get();
+      const { lastRoundBets, balance, spinState, isLiveMode, livePhase } = get();
+      if (isLiveMode && livePhase !== 'betting') return;
       if (spinState === 'spinning') return;
 
       const totalNeeded = Object.values(lastRoundBets).reduce((acc, b) => acc + b.amount, 0);
@@ -299,58 +338,184 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
       });
     },
 
-    spin: async () => {
-      const { bets, spinState, wheelType, fastSpin, predictMode, userPrediction } = get();
-      if (spinState === 'spinning') return null;
+    syncLiveTick: (nowMs: number = Date.now()) => {
+      const {
+        isLiveMode,
+        livePhase: currentPhase,
+        liveRoundId: currentRoundId,
+        bets,
+        balance,
+        recentNumbers,
+        spinCount,
+        syncOffsetMs,
+      } = get();
 
-      // In settled state, must place new bets or click Repeat
-      if (spinState === 'settled') {
-        soundEffects.triggerHaptic([20, 20]);
-        return null;
-      }
+      if (!isLiveMode) return;
 
+      const adjustedNow = nowMs + syncOffsetMs;
       const activeBetsList = Object.values(bets);
-      if (activeBetsList.length === 0) {
-        soundEffects.triggerHaptic([20, 20]);
-        return null;
+      const liveState = getLiveRoundState(adjustedNow, activeBetsList);
+
+      // 1. Check for Round rollover
+      if (liveState.roundId !== currentRoundId) {
+        const lastBets = Object.keys(bets).length > 0 ? { ...bets } : get().lastRoundBets;
+        set({
+          liveRoundId: liveState.roundId,
+          livePhase: liveState.phase,
+          liveTimeRemaining: liveState.timeRemaining,
+          livePhaseProgress: liveState.phaseProgress,
+          activePlayersCount: liveState.activePlayersCount,
+          roomBets: liveState.roomBets,
+          numberBetCounts: liveState.numberBetCounts,
+          leastChosenNumbers: liveState.leastChosenNumbers,
+          bets: {},
+          betHistoryStack: [],
+          lastRoundBets: lastBets,
+          winningNumber: null,
+          spinResult: null,
+          spinState: 'idle',
+        });
+        return;
       }
 
-      // 1. Determine Winning Number cryptographically
-      const winningNumber = getRandomWinningNumber(wheelType);
+      // 2. Check for Phase transition within current round
+      if (liveState.phase !== currentPhase) {
+        if (liveState.phase === 'spinning') {
+          // Transition: Betting (5s) -> Spinning (9.5s)
+          // Table locks automatically!
+          const targetNum = liveState.winningNumber;
+          const pocketIndex = liveState.winningPocketIndex;
+          soundEffects.startBallSpinLoop(9.5);
+
+          set({
+            livePhase: 'spinning',
+            spinState: 'spinning',
+            liveTimeRemaining: liveState.timeRemaining,
+            livePhaseProgress: liveState.phaseProgress,
+            winningNumber: targetNum,
+            targetWinningPocketIndex: pocketIndex,
+            spinStartTime: adjustedNow - (liveState.elapsedInPhase * 1000),
+            spinDuration: 9.5,
+            lastRoundBets: { ...bets },
+            roomBets: liveState.roomBets,
+            numberBetCounts: liveState.numberBetCounts,
+            leastChosenNumbers: liveState.leastChosenNumbers,
+          });
+
+          // Post bets to live backend asynchronously
+          if (activeBetsList.length > 0 && typeof window !== 'undefined') {
+            const userId = localStorage.getItem('playin_user_id') || 'local_vip';
+            fetch('/api/casino/roulette/live', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                roundId: liveState.roundId,
+                userId,
+                playerName: 'You',
+                bets: activeBetsList.map((b) => ({
+                  numbers: b.numbers,
+                  amount: b.amount,
+                  label: b.label,
+                })),
+              }),
+            }).catch(() => {});
+          }
+          return;
+        } else if (liveState.phase === 'settled') {
+          // Transition: Spinning -> Settled
+          const winningNum = liveState.winningNumber;
+          const settlement = evaluateSpin(winningNum, activeBetsList);
+          const newBal = balance + settlement.totalPayout;
+          const updatedRecent = [winningNum, ...recentNumbers.slice(0, 19)];
+
+          persistBalance(newBal);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY_RECENT, JSON.stringify(updatedRecent));
+          }
+
+          if (settlement.totalPayout > 0) {
+            soundEffects.playWinFanfare();
+          } else {
+            soundEffects.playBallBounceSound(0.8);
+          }
+
+          set({
+            livePhase: 'settled',
+            spinState: 'settled',
+            liveTimeRemaining: liveState.timeRemaining,
+            livePhaseProgress: liveState.phaseProgress,
+            balance: newBal,
+            spinResult: settlement,
+            recentNumbers: updatedRecent,
+            spinCount: spinCount + 1,
+            roomBets: liveState.roomBets,
+          });
+          return;
+        } else if (liveState.phase === 'betting') {
+          // Transition: Settled -> Betting (New 5s betting window!)
+          set({
+            livePhase: 'betting',
+            spinState: 'idle',
+            liveTimeRemaining: liveState.timeRemaining,
+            livePhaseProgress: liveState.phaseProgress,
+            bets: {},
+            betHistoryStack: [],
+            lastRoundBets: { ...bets },
+            winningNumber: null,
+            spinResult: null,
+            roomBets: liveState.roomBets,
+            numberBetCounts: liveState.numberBetCounts,
+            leastChosenNumbers: liveState.leastChosenNumbers,
+          });
+          return;
+        }
+      }
+
+      // Continuous tick update within current phase
+      set({
+        liveTimeRemaining: liveState.timeRemaining,
+        livePhaseProgress: liveState.phaseProgress,
+        activePlayersCount: liveState.activePlayersCount,
+        roomBets: liveState.roomBets,
+        numberBetCounts: liveState.numberBetCounts,
+        leastChosenNumbers: liveState.leastChosenNumbers,
+      });
+    },
+
+    setLiveMode: (live: boolean) => set({ isLiveMode: live }),
+
+    spin: async () => {
+      // In live mode, spinning is driven synchronously by the live clock!
+      const { isLiveMode } = get();
+      if (isLiveMode) return null;
+
+      // Manual fallback
+      const { bets, spinState, wheelType } = get();
+      if (spinState === 'spinning') return null;
+      const activeBetsList = Object.values(bets);
+      if (activeBetsList.length === 0) return null;
+
+      const outcome = computeLeastChosenWinningNumber(Date.now(), activeBetsList);
+      const winningNumber = outcome.winningNumber;
       const pocketIndex = EUROPEAN_NUMBERS.indexOf(winningNumber);
 
-      const duration = fastSpin ? 1.8 : 3.8;
-      soundEffects.startBallSpinLoop(duration);
+      soundEffects.startBallSpinLoop(9.5);
 
       set({
         spinState: 'spinning',
         winningNumber,
         targetWinningPocketIndex: pocketIndex >= 0 ? pocketIndex : 0,
         spinStartTime: Date.now(),
+        spinDuration: 9.5,
         lastRoundBets: { ...bets },
         spinResult: null,
       });
-
-      // Award XP if in predict mode
-      if (predictMode) {
-        const coveredCount = new Set(activeBetsList.flatMap((b) => b.numbers)).size;
-        const trueProb = (coveredCount / 37) * 100;
-        const diff = Math.abs(trueProb - userPrediction);
-        const earnedXp = Math.max(10, Math.round(100 - diff * 2));
-        const newXp = get().playerXp + earnedXp;
-        const newLevel = Math.floor(newXp / 100) + 1;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY_XP, String(newXp));
-        }
-        set({ playerXp: newXp, playerLevel: newLevel });
-      }
 
       return winningNumber;
     },
 
     onSpinComplete: () => {
       const { winningNumber, bets, balance, recentNumbers, spinCount, spinState } = get();
-      // CRITICAL: Prevent duplicate settlement calls!
       if (spinState !== 'spinning' || winningNumber === null) return;
 
       const activeBetsList = Object.values(bets);

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ShieldAlert } from 'lucide-react';
 import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import {
   RED_NUMBERS,
@@ -61,6 +62,11 @@ export function BettingTable() {
   const winningNumber = useRouletteStore((s) => s.winningNumber);
   const spinResult = useRouletteStore((s) => s.spinResult);
   const spinState = useRouletteStore((s) => s.spinState);
+  const isLiveMode = useRouletteStore((s) => s.isLiveMode);
+  const livePhase = useRouletteStore((s) => s.livePhase);
+
+  // Table is locked when spinning, settled, or when in live mode outside betting window
+  const isTableLocked = spinState === 'spinning' || spinState === 'settled' || (isLiveMode && livePhase !== 'betting');
 
   // Active betting mode: Standard (35:1), Splits (17:1), Corners (8:1), Streets (11:1), Six-Line (5:1)
   const [betMode, setBetMode] = useState<'standard' | 'splits' | 'corners' | 'streets' | 'six-line'>('standard');
@@ -94,7 +100,7 @@ export function BettingTable() {
   };
 
   const handleCellClick = (num: number) => {
-    if (spinState === 'spinning') return;
+    if (isTableLocked) return;
 
     if (betMode === 'standard') {
       placeBet(`straight-${num}`, 'straight', `${num}`, [num]);
@@ -251,9 +257,21 @@ export function BettingTable() {
       </div>
 
       {/* Main Table Felt Container */}
-      <div className="relative rounded-2xl p-1 bg-gradient-to-b from-[#0a4a2b] via-[#05331e] to-[#022013] border-2 border-[#D4AF37]/50 shadow-[0_0_20px_rgba(4,66,34,0.5)]">
+      <div className={`relative rounded-2xl p-1 bg-gradient-to-b from-[#0a4a2b] via-[#05331e] to-[#022013] border-2 border-[#D4AF37]/50 shadow-[0_0_20px_rgba(4,66,34,0.5)] transition-all ${
+        isTableLocked ? 'cursor-not-allowed select-none' : ''
+      }`}>
         {/* Felt Texture Overlay */}
         <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 via-transparent to-black/30 pointer-events-none" />
+
+        {/* Lock Overlay when betting window is closed */}
+        {isTableLocked && (
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[0.5px] rounded-2xl z-40 flex items-center justify-center pointer-events-none">
+            <div className="px-3.5 py-1.5 rounded-full bg-black/85 border border-red-500/60 text-red-300 text-[11px] sm:text-xs font-black tracking-wider uppercase shadow-2xl flex items-center gap-1.5 animate-pulse">
+              <ShieldAlert className="w-4 h-4 text-red-400 stroke-[2.5]" />
+              <span>Bets Closed • Wheel Spinning</span>
+            </div>
+          </div>
+        )}
 
         {/* 1. Numbers Section (0 + 3 Rows x 12 Columns + 2:1 Columns) */}
         <div className="relative grid grid-cols-[38px_repeat(12,minmax(0,1fr))_34px] gap-[1.5px] bg-[#D4AF37]/30 p-[1.5px] rounded-xl overflow-hidden">

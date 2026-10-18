@@ -349,7 +349,8 @@ export function RouletteWheel3D() {
       lastTime = currentTime;
 
       const { spinState, targetPocketIndex, fastSpin, onSpinComplete } = stateRef.current;
-      const duration = fastSpin ? 1.8 : 3.8;
+      // Realistic 9.5-second suspenseful casino deceleration spin
+      const duration = fastSpin ? 2.5 : 9.5;
 
       if (spinState === 'spinning') {
         if (!isSpinningActive) {
@@ -360,8 +361,8 @@ export function RouletteWheel3D() {
           spinDuration = duration;
           wheelStartAngle = currentWheelAngle;
 
-          // Wheel makes full counter-clockwise turns
-          wheelTotalDelta = -(Math.PI * 2 * (fastSpin ? 1.5 : 2.5));
+          // Wheel makes 3.5 smooth counter-clockwise turns
+          wheelTotalDelta = -(Math.PI * 2 * (fastSpin ? 1.5 : 3.5));
           const finalWheelAngle = wheelStartAngle + wheelTotalDelta;
 
           // Target pocket local angle on wheel rotor
@@ -376,7 +377,8 @@ export function RouletteWheel3D() {
 
           // Ball initial launch angle (opposite direction)
           ballStartAngle = currentBallAngle;
-          const fullRevolutions = fastSpin ? 3 : 6;
+          // 11 full revolutions for fast initial launch and long suspenseful deceleration
+          const fullRevolutions = fastSpin ? 4 : 11;
 
           // Calculate exact travel so ball arrives precisely at targetFinalWorldAngle
           let angleDiff = (targetFinalWorldAngle - ballStartAngle) % (Math.PI * 2);
@@ -412,18 +414,18 @@ export function RouletteWheel3D() {
             onSpinComplete();
           }
         } else {
-          // Smooth cubic ease-out for wheel
-          const wheelEase = 1 - Math.pow(1 - p, 3);
+          // Smooth quartic ease-out for wheel: starts fast, slows down gently
+          const wheelEase = 1 - Math.pow(1 - p, 3.2);
           currentWheelAngle = wheelStartAngle + wheelTotalDelta * wheelEase;
           rotorGroup.rotation.y = currentWheelAngle;
 
           // Smooth continuous deceleration for ball:
-          const ballEase = 1 - Math.pow(1 - p, 2.6);
+          const ballEase = 1 - Math.pow(1 - p, 3.0);
           currentBallAngle = ballStartAngle + ballTotalTravel * ballEase;
 
-          // Ball Radius and Height Phases:
-          if (p < 0.60) {
-            // Phase 1: High outer track orbit
+          // Ball Radius and Height Phases (Over 9.5 seconds of dramatic casino motion):
+          if (p < 0.55) {
+            // Phase 1 (0s to 5.2s): High outer track orbit, fast revolutions decelerating
             ballRadius = 3.32;
             ballHeight = 0.04;
             ballMesh.position.set(
@@ -431,9 +433,9 @@ export function RouletteWheel3D() {
               ballHeight,
               Math.sin(currentBallAngle) * ballRadius
             );
-          } else if (p < 0.84) {
-            // Phase 2: Smooth spiral drop into pocket ring
-            const u = (p - 0.60) / 0.24;
+          } else if (p < 0.80) {
+            // Phase 2 (5.2s to 7.6s): Smooth spiral drop down the mahogany cone into pocket ring
+            const u = (p - 0.55) / 0.25;
             const smooth = u * u * (3 - 2 * u); // smoothstep
             ballRadius = 3.32 - smooth * (3.32 - 2.38);
             ballHeight = 0.04 - smooth * (0.04 - (-0.20));
@@ -444,15 +446,15 @@ export function RouletteWheel3D() {
               Math.sin(currentBallAngle) * ballRadius
             );
 
-            if (currentTime - lastBounceTime > 180) {
-              soundEffects.playBallBounceSound(0.5 * (1 - u));
+            if (currentTime - lastBounceTime > 200) {
+              soundEffects.playBallBounceSound(0.55 * (1 - u));
               lastBounceTime = currentTime;
             }
-          } else {
-            // Phase 3: Settling micro-bounces inside the winning pocket bed
+          } else if (p < 0.95) {
+            // Phase 3 (7.6s to 9.0s): Suspenseful fret chattering and bouncing across pockets
             ballRadius = 2.38;
-            const v = (p - 0.84) / 0.16;
-            const bounce = Math.abs(Math.sin(v * Math.PI * 3)) * Math.pow(1 - v, 1.8) * 0.07;
+            const v = (p - 0.80) / 0.15;
+            const bounce = Math.abs(Math.sin(v * Math.PI * 6)) * Math.pow(1 - v, 1.4) * 0.09;
             ballHeight = -0.20 + bounce;
 
             // Interpolate toward the rotating winning pocket's exact 3D coordinates
@@ -462,7 +464,7 @@ export function RouletteWheel3D() {
             const targetPocketX = targetLocalX * Math.cos(currentWheelAngle) + targetLocalZ * Math.sin(currentWheelAngle);
             const targetPocketZ = -targetLocalX * Math.sin(currentWheelAngle) + targetLocalZ * Math.cos(currentWheelAngle);
 
-            const blend = Math.min(v * 1.4, 1.0);
+            const blend = Math.min(v * 1.3, 1.0);
             const orbitX = Math.cos(currentBallAngle) * 2.38;
             const orbitZ = Math.sin(currentBallAngle) * 2.38;
             const posX = orbitX + (targetPocketX - orbitX) * blend;
@@ -470,10 +472,24 @@ export function RouletteWheel3D() {
 
             ballMesh.position.set(posX, ballHeight, posZ);
 
-            if (v > 0.1 && currentTime - lastBounceTime > 120 && bounce > 0.01) {
-              soundEffects.playBallBounceSound(bounce * 12);
+            if (currentTime - lastBounceTime > 110 && bounce > 0.015) {
+              soundEffects.playBallBounceSound(bounce * 14);
               lastBounceTime = currentTime;
             }
+          } else {
+            // Phase 4 (9.0s to 9.5s): Final settling micro-bounces inside winning pocket
+            ballRadius = 2.38;
+            const w = (p - 0.95) / 0.05;
+            const microBounce = Math.abs(Math.sin(w * Math.PI * 2)) * (1 - w) * 0.03;
+            ballHeight = -0.20 + microBounce;
+
+            const targetLocalAngle = targetPocketIndex * pocketAngleStep - Math.PI / 2;
+            const targetLocalX = Math.cos(targetLocalAngle) * 2.38;
+            const targetLocalZ = Math.sin(targetLocalAngle) * 2.38;
+            const targetPocketX = targetLocalX * Math.cos(currentWheelAngle) + targetLocalZ * Math.sin(currentWheelAngle);
+            const targetPocketZ = -targetLocalX * Math.sin(currentWheelAngle) + targetLocalZ * Math.cos(currentWheelAngle);
+
+            ballMesh.position.set(targetPocketX, ballHeight, targetPocketZ);
           }
 
           // Camera push-in effect

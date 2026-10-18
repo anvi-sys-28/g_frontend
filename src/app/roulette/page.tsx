@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { AppShell } from '@/components/shared/AppShell';
 import { Header } from '@/components/roulette/Header';
 import { LastResultsCard } from '@/components/roulette/LastResultsCard';
+import { LiveCountdownBanner } from '@/components/roulette/LiveCountdownBanner';
 import { BettingTable } from '@/components/roulette/BettingTable';
 import { ChipSelector } from '@/components/roulette/ChipSelector';
 import { ActionBar } from '@/components/roulette/ActionBar';
@@ -42,10 +43,20 @@ export default function RoulettePage() {
   const wheelType = useRouletteStore((s) => s.wheelType);
   const recentNumbers = useRouletteStore((s) => s.recentNumbers);
   const toggleStats = useRouletteStore((s) => s.toggleStats);
+  const syncLiveTick = useRouletteStore((s) => s.syncLiveTick);
 
   const activeBetsList = Object.values(bets);
   const summary = calculateTableSummary(activeBetsList, wheelType);
   const streak = analyzeStreak(recentNumbers);
+
+  // Synchronous Live Roulette Loop (100ms tick for sub-second precision countdown & phase syncing)
+  useEffect(() => {
+    syncLiveTick();
+    const interval = setInterval(() => {
+      syncLiveTick();
+    }, 100);
+    return () => clearInterval(interval);
+  }, [syncLiveTick]);
 
   // Sync with user's authentic casino coins from database and localStorage
   useEffect(() => {
@@ -182,6 +193,9 @@ export default function RoulettePage() {
         {/* Last Results Glass Card on Top Right */}
         <LastResultsCard />
       </div>
+
+      {/* Synchronized Live Round Countdown & Status Banner */}
+      <LiveCountdownBanner />
 
       {/* Interactive Betting Table Felt (Landscape orientation) */}
       <div className="flex-1 flex flex-col justify-center py-1">

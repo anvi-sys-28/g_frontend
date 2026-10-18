@@ -71,9 +71,12 @@ export function ChipSelector() {
   const clearAllBets = useRouletteStore((s) => s.clearAllBets);
   const betHistoryStack = useRouletteStore((s) => s.betHistoryStack);
   const spinState = useRouletteStore((s) => s.spinState);
+  const isLiveMode = useRouletteStore((s) => s.isLiveMode);
+  const livePhase = useRouletteStore((s) => s.livePhase);
 
   const isSpinning = spinState === 'spinning';
-  const canUndo = betHistoryStack.length > 0 && !isSpinning;
+  const isLocked = isSpinning || (isLiveMode && livePhase !== 'betting');
+  const canUndo = betHistoryStack.length > 0 && !isLocked;
 
   return (
     <div className="relative w-full max-w-[430px] mx-auto px-3 py-1 flex items-center justify-between select-none">
@@ -89,7 +92,7 @@ export function ChipSelector() {
       </button>
 
       {/* Chips 10, 50, 100, 250, 500, 1000 */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className={`flex items-center gap-1.5 sm:gap-2 transition-opacity ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}>
         {CHIPS.map((chip) => {
           const isSelected = selectedChip === chip.value;
 
@@ -97,6 +100,7 @@ export function ChipSelector() {
             <button
               key={chip.value}
               type="button"
+              disabled={isLocked}
               onClick={() => setSelectedChip(chip.value)}
               className={`relative rounded-full flex items-center justify-center font-black transition-all transform active:scale-90 ${
                 isSelected
