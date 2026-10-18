@@ -334,6 +334,11 @@ export const casinoStore = {
     return bet;
   },
 
+  getRecentWinners(limit: number = 30): CasinoBetRecord[] {
+    const data = loadData();
+    return data.bets.filter((b) => b.won && b.payout > 0).slice(0, limit);
+  },
+
   // Live Multiplayer Bets Cache
   registerRouletteBet(roundId: number, bet: LiveRouletteBet) {
     if (!liveRouletteBets.has(roundId)) {

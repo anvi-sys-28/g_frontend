@@ -21,7 +21,7 @@ export interface RecentRoundEntry {
 
 export interface AndarBaharState {
   // Gameplay State
-  selectedSide: BetSide;
+  selectedSide: BetSide | null;
   selectedChip: number; // 50, 100, 250, 500, 1000
   gameState: 'idle' | 'dealing' | 'round_settled';
 
@@ -58,7 +58,7 @@ export interface AndarBaharState {
   userPrediction: number; // 0-100%
 
   // Actions
-  setSelectedSide: (side: BetSide) => void;
+  setSelectedSide: (side: BetSide | null) => void;
   setSelectedChip: (chip: number) => void;
   setSkipAnimation: (skip: boolean) => void;
   setFirstSideRule: (rule: AndarBaharConfig['firstSideRule']) => void;
@@ -101,7 +101,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
   const initialLive = getLiveAndarBaharState(Date.now());
 
   return {
-    selectedSide: 'ANDAR',
+    selectedSide: null,
     selectedChip: 100,
     gameState: initialLive.phase === 'dealing' ? 'dealing' : initialLive.phase === 'settled' ? 'round_settled' : 'idle',
 
@@ -134,14 +134,14 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
     predictMode: false,
     userPrediction: 50,
 
-    setSelectedSide: (side: BetSide) => {
-      const { isLiveMode, livePhase } = get();
+    setSelectedSide: (side: BetSide | null) => {
+      const { isLiveMode, livePhase, selectedSide } = get();
       if (isLiveMode && livePhase !== 'betting') {
         andarBaharAudio.triggerHaptic([25, 25]);
         return;
       }
       andarBaharAudio.playChipClick();
-      set({ selectedSide: side });
+      set({ selectedSide: selectedSide === side ? null : side });
     },
 
     setSelectedChip: (chip: number) => {
@@ -178,7 +178,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
       if (!isLiveMode) return;
 
       const sharedStore = useGameStore.getState();
-      const localBet = { side: selectedSide, amount: selectedChip };
+      const localBet = selectedSide ? { side: selectedSide, amount: selectedChip } : undefined;
       const liveState = getLiveAndarBaharState(nowMs, localBet);
 
       // 1. Check for Round rollover
@@ -200,6 +200,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
           baharCards: liveState.phase === 'betting' ? [] : liveState.baharCards,
           roundResult: null,
           firstSideNotice: null,
+          selectedSide: null, // Clear choice for new round
           gameState:
             liveState.phase === 'dealing'
               ? 'dealing'
@@ -214,8 +215,8 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
       if (liveState.phase !== currentPhase) {
         if (liveState.phase === 'dealing') {
           // Transition: Betting (5s) -> Dealing (10s suspense)
-          // Automatically deduct bet if user has balance
-          if (sharedStore.balance >= selectedChip) {
+          // Automatically deduct bet ONLY if player made an active selection
+          if (selectedSide && sharedStore.balance >= selectedChip) {
             sharedStore.deductBalance(selectedChip);
           }
           andarBaharAudio.playShuffle();
@@ -237,8 +238,8 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
             leastChosenSide: liveState.leastChosenSide,
           });
 
-          // Post live bet asynchronously to API
-          if (typeof window !== 'undefined') {
+          // Post live bet asynchronously to API ONLY if player made an active selection
+          if (selectedSide && typeof window !== 'undefined') {
             const userId = localStorage.getItem('playin_user_id') || 'local_vip';
             fetch('/api/casino/andar-bahar/live', {
               method: 'POST',
@@ -265,9 +266,9 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
           return;
         } else if (liveState.phase === 'settled') {
           // Transition: Dealing -> Settled
-          const isUserWinner = selectedSide === liveState.winningSide;
+          const isUserWinner = selectedSide !== null && selectedSide === liveState.winningSide;
           const payout = isUserWinner ? Math.round(selectedChip * config.payoutMultiplier) : 0;
-          const netProfit = isUserWinner ? payout - selectedChip : -selectedChip;
+          const netProfit = selectedSide ? (isUserWinner ? payout - selectedChip : -selectedChip) : 0;
 
           if (isUserWinner && payout > 0) {
             sharedStore.addBalance(payout);
@@ -281,7 +282,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
             ...recentResults.slice(0, 14),
           ];
 
-          if (typeof window !== 'undefined') {
+          if (selectedSide && typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEY_RECENT_AB, JSON.stringify(updatedRecent));
             const userId = localStorage.getItem('playin_user_id') || 'local_vip';
 
@@ -327,7 +328,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
             matchingCard: liveState.matchingCard,
             totalCardsDealt: liveState.dealtSteps.length,
             userBetSide: selectedSide,
-            betAmount: selectedChip,
+            betAmount: selectedSide ? selectedChip : 0,
             won: isUserWinner,
             payout,
             netProfit,
@@ -345,6 +346,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
             currentStepIndex: liveState.dealtSteps.length,
             firstSideNotice: null,
             roomBets: liveState.roomBets,
+            selectedSide: null, // CLEAR CHOSEN OPTION ON SETTLEMENT!
           });
           return;
         } else if (liveState.phase === 'betting') {
@@ -364,6 +366,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
             andarTotalWager: liveState.andarTotalWager,
             baharTotalWager: liveState.baharTotalWager,
             leastChosenSide: liveState.leastChosenSide,
+            selectedSide: null, // ENSURE CLEAN STATE FOR NEW ROUND SO USER CAN CHOOSE FRESHLY!
           });
           return;
         }
@@ -408,6 +411,7 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
         baharCards: [],
         roundResult: null,
         firstSideNotice: null,
+        selectedSide: null,
       });
     },
   };

@@ -17,6 +17,7 @@ import { useGameStore } from '@/lib/shared/useGameStore';
 import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import { getExactProbabilities } from '@/lib/andar-bahar/andarBaharEngine';
 import { Calculator, Sparkles, BookOpen, TrendingDown, Layers } from 'lucide-react';
+import { LiveWinnersChatOverlay } from '@/components/casino/LiveWinnersChatOverlay';
 
 // Dynamically import Three.js 3D Dealer Table with SSR disabled
 const DealerTable3D = dynamic(
@@ -99,7 +100,7 @@ export default function AndarBaharPage() {
 
   // Exact mathematical probability
   const exact = getExactProbabilities(config.firstSideRule);
-  const winProb = selectedSide === 'ANDAR' ? exact.andarProbability : exact.baharProbability;
+  const winProb = selectedSide === 'BAHAR' ? exact.baharProbability : exact.andarProbability;
   const evPercent = (winProb * config.payoutMultiplier - 1) * 100;
 
   // Streak detection for Gambler's Fallacy
@@ -218,6 +219,9 @@ export default function AndarBaharPage() {
       {/* 3. Hero 3D Dealer Table (~45% of Screen Height) */}
       <div className="relative w-full h-[42vh] sm:h-[370px] bg-transparent shrink-0 overflow-hidden">
         <DealerTable3D />
+
+        {/* Live Winners Chat Overlay on the video scene (YouTube style) */}
+        <LiveWinnersChatOverlay game="ANDAR_BAHAR" />
       </div>
 
       {/* Synchronized Live Round Countdown & Status Banner */}

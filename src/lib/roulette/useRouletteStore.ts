@@ -493,6 +493,9 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
             recentNumbers: updatedRecent,
             spinCount: spinCount + 1,
             roomBets: liveState.roomBets,
+            lastRoundBets: { ...bets },
+            bets: {},
+            betHistoryStack: [],
           });
           return;
         } else if (liveState.phase === 'betting') {
@@ -504,7 +507,6 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
             livePhaseProgress: liveState.phaseProgress,
             bets: {},
             betHistoryStack: [],
-            lastRoundBets: { ...bets },
             winningNumber: null,
             spinResult: null,
             roomBets: liveState.roomBets,
@@ -585,6 +587,9 @@ export const useRouletteStore = create<RouletteStoreState>((set, get) => {
         balance: newBalance,
         recentNumbers: updatedRecent,
         spinCount: spinCount + 1,
+        lastRoundBets: { ...bets },
+        bets: {},
+        betHistoryStack: [],
       });
     },
 

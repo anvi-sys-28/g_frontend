@@ -75,15 +75,15 @@ export function BettingTable() {
   const totalStake = Object.values(bets).reduce((acc, b) => acc + b.amount, 0);
 
   const isWinning = (num: number) => {
-    return spinState === 'settled' && winningNumber === num;
+    return (spinState === 'settled' || (isLiveMode && livePhase === 'settled')) && winningNumber === num;
   };
 
   const isBetWinner = (betId: string) => {
-    return spinState === 'settled' && spinResult?.winningBets.some((wb) => wb.betId === betId);
+    return (spinState === 'settled' || (isLiveMode && livePhase === 'settled')) && spinResult?.winningBets.some((wb) => wb.betId === betId);
   };
 
   const isOutsideWin = (type: string) => {
-    if (spinState !== 'settled' || winningNumber === null) return false;
+    if ((spinState !== 'settled' && (!isLiveMode || livePhase !== 'settled')) || winningNumber === null) return false;
     if (type === 'red') return RED_NUMBERS.has(winningNumber);
     if (type === 'black') return BLACK_NUMBERS.has(winningNumber);
     if (type === 'even') return winningNumber !== 0 && winningNumber % 2 === 0;

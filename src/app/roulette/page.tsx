@@ -21,6 +21,7 @@ import {
   EUROPEAN_NUMBERS,
 } from '@/lib/roulette/rouletteEngine';
 import { Calculator, Sparkles, TrendingDown, BookOpen } from 'lucide-react';
+import { LiveWinnersChatOverlay } from '@/components/casino/LiveWinnersChatOverlay';
 
 // Dynamically import Three.js 3D Wheel with SSR disabled
 const RouletteWheel3D = dynamic(
@@ -209,6 +210,9 @@ export default function RoulettePage() {
       {/* Hero 3D Scene (~40% of Screen Height) */}
       <div className="relative w-full h-[36vh] sm:h-[320px] bg-transparent shrink-0 overflow-hidden">
         <RouletteWheel3D />
+
+        {/* Live Winners Chat Overlay on the video scene (YouTube style) */}
+        <LiveWinnersChatOverlay game="ROULETTE" />
 
         {/* Last Results Glass Card on Top Right */}
         <LastResultsCard />

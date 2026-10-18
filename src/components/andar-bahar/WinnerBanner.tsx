@@ -72,9 +72,13 @@ export function WinnerBanner() {
                   (Profit: +{roundResult.netProfit?.toLocaleString()} Coins)
                 </span>
               </div>
-            ) : (
+            ) : (roundResult.betAmount || 0) > 0 ? (
               <span className="text-xs font-bold text-red-400 mt-1 block">
                 Lost {roundResult.betAmount} Coins
+              </span>
+            ) : (
+              <span className="text-xs font-bold text-neutral-400 mt-1 block">
+                No bet placed this round
               </span>
             )}
           </div>

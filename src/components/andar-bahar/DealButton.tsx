@@ -36,12 +36,19 @@ export function DealButton() {
   const isDealing = gameState === 'dealing' || (isLiveMode && livePhase === 'dealing');
   const hasInsufficientBalance = balance < selectedChip;
 
-  let buttonText = `DEAL ANDAR BAHAR (${selectedChip} COINS)`;
+  let buttonText = selectedSide
+    ? `DEAL ANDAR BAHAR (${selectedChip} ON ${selectedSide})`
+    : 'CHOOSE ANDAR OR BAHAR';
+
   if (isLiveMode) {
     if (livePhase === 'betting') {
-      buttonText = `LOCKS IN ${Math.ceil(liveTimeRemaining)}s • ${selectedChip} ON ${selectedSide}`;
+      buttonText = selectedSide
+        ? `LOCKS IN ${Math.ceil(liveTimeRemaining)}s • ${selectedChip} ON ${selectedSide}`
+        : `CHOOSE ANDAR OR BAHAR (${Math.ceil(liveTimeRemaining)}s)`;
     } else if (livePhase === 'dealing') {
-      buttonText = `DEALING CARDS... (${liveTimeRemaining.toFixed(1)}s)`;
+      buttonText = selectedSide
+        ? `DEALING... (${selectedChip} ON ${selectedSide})`
+        : `DEALING CARDS... (${liveTimeRemaining.toFixed(1)}s)`;
     } else {
       buttonText = 'ROUND SETTLED';
     }

@@ -86,7 +86,7 @@ export interface RoundResult {
   winningSide: BetSide;
   matchingCard: Card;
   totalCardsDealt: number; // excludes opening card
-  userBetSide?: BetSide;
+  userBetSide?: BetSide | null;
   betAmount?: number;
   won?: boolean;
   payout?: number;
