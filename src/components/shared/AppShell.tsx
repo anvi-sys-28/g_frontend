@@ -11,11 +11,11 @@ interface AppShellProps {
 
 export function AppShell({ children, sideColumn }: AppShellProps) {
   return (
-    <div className="min-h-screen text-white flex items-center justify-center relative overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#0B0C0E] text-white flex items-center justify-center relative overflow-x-hidden font-sans">
       {/* 100% Fixed Motionless Background Layer for Roulette and Andar Bahar Games */}
       <div
         aria-hidden="true"
-        className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0"
+        className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0 bg-[#0B0C0E]"
         style={{
           position: 'fixed',
           top: 0,

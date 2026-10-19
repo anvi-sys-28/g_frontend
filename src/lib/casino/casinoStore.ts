@@ -65,8 +65,19 @@ interface CasinoStorageData {
   transactions: CoinTransactionRecord[];
 }
 
-const STORAGE_DIR = path.join(process.cwd(), 'data');
-const STORAGE_FILE = path.join(STORAGE_DIR, 'casino_data.json');
+function getStorageFile(): string {
+  const cwd = process.cwd();
+  const parentFile = path.resolve(cwd, '..', 'data', 'casino_data.json');
+  const directFile = path.resolve(cwd, 'data', 'casino_data.json');
+
+  if (fs.existsSync(parentFile)) return parentFile;
+  if (fs.existsSync(directFile)) return directFile;
+
+  if (fs.existsSync(path.resolve(cwd, '..', 'package.json'))) {
+    return parentFile;
+  }
+  return directFile;
+}
 
 // In-memory runtime cache for high-speed concurrent gaming
 let cache: CasinoStorageData | null = null;
@@ -75,9 +86,11 @@ const liveRouletteBets = new Map<number, LiveRouletteBet[]>();
 const liveAndarBaharBets = new Map<number, LiveAndarBaharBet[]>();
 
 function ensureStorageDir() {
-  if (!fs.existsSync(STORAGE_DIR)) {
+  const file = getStorageFile();
+  const dir = path.dirname(file);
+  if (!fs.existsSync(dir)) {
     try {
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true });
     } catch {}
   }
 }
@@ -85,6 +98,7 @@ function ensureStorageDir() {
 function loadData(): CasinoStorageData {
   if (cache) return cache;
   ensureStorageDir();
+  const storageFile = getStorageFile();
 
   const defaultData: CasinoStorageData = {
     users: {
@@ -120,9 +134,9 @@ function loadData(): CasinoStorageData {
     transactions: [],
   };
 
-  if (fs.existsSync(STORAGE_FILE)) {
+  if (fs.existsSync(storageFile)) {
     try {
-      const content = fs.readFileSync(STORAGE_FILE, 'utf-8');
+      const content = fs.readFileSync(storageFile, 'utf-8');
       const parsed = JSON.parse(content);
       cache = {
         users: { ...defaultData.users, ...(parsed.users || {}) },
@@ -144,7 +158,8 @@ function saveData(data: CasinoStorageData) {
   cache = data;
   ensureStorageDir();
   try {
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const file = getStorageFile();
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
   } catch (e) {
     console.error('Error writing casino_data.json:', e);
   }
@@ -334,9 +349,11 @@ export const casinoStore = {
     return bet;
   },
 
-  getRecentWinners(limit: number = 30): CasinoBetRecord[] {
+  getRecentWinners(game?: 'ROULETTE' | 'ANDAR_BAHAR', limit: number = 30): CasinoBetRecord[] {
     const data = loadData();
-    return data.bets.filter((b) => b.won && b.payout > 0).slice(0, limit);
+    return data.bets
+      .filter((b) => b.won && b.payout > 0 && (!game || b.game === game))
+      .slice(0, limit);
   },
 
   // Live Multiplayer Bets Cache

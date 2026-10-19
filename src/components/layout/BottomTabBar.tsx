@@ -223,10 +223,13 @@ export function BottomTabBar() {
     return null;
   }
 
+  const isCasinoRoute =
+    pathname.startsWith('/casino') || pathname.startsWith('/roulette') || pathname.startsWith('/andar-bahar');
+
   // Active Index: 0 = Sports/Cricket, 1 = Casino (or Roulette, Andar Bahar), 2 = Profile
   const activeIndex = showProfileModal
     ? 2
-    : (pathname.startsWith('/casino') || pathname.startsWith('/roulette') || pathname.startsWith('/andar-bahar'))
+    : isCasinoRoute
     ? 1
     : 0;
 
@@ -267,6 +270,15 @@ export function BottomTabBar() {
 
   return (
     <>
+      {/* Seamless dark gradient scrim under floating nav on casino routes so nothing ever shows white behind the bar */}
+      {isCasinoRoute && (
+        <div
+          aria-hidden="true"
+          className="fixed bottom-0 inset-x-0 h-28 bg-gradient-to-t from-[#0B0C0E] via-[#0B0C0E]/80 to-transparent pointer-events-none select-none"
+          style={{ zIndex: 9990 }}
+        />
+      )}
+
       {/* Authentic Limelight Navigation Bar with Cricket, Casino, and Profile */}
       <div
         aria-label="Bottom Navigation"

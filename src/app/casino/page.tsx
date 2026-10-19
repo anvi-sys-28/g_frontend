@@ -266,11 +266,11 @@ export default function CasinoPage() {
   ];
 
   return (
-    <div className="relative min-h-screen pb-28">
+    <div className="relative min-h-screen pb-24 bg-[#0B0C0E] text-white">
       {/* 100% Fixed, Motionless Background Layer */}
       <div
         aria-hidden="true"
-        className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0"
+        className="fixed inset-0 pointer-events-none select-none overflow-hidden z-0 bg-[#0B0C0E]"
         style={{
           position: 'fixed',
           top: 0,
