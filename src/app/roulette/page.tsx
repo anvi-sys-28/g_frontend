@@ -99,6 +99,21 @@ export default function RoulettePage() {
             if (data?.roulette?.count !== undefined) {
               useRouletteStore.setState({ activePlayersCount: data.roulette.count });
             }
+            if (data?.userCoins !== undefined && data.userCoins !== null) {
+              const currentPhase = useRouletteStore.getState().livePhase;
+              const currentBets = useRouletteStore.getState().bets;
+              if (currentPhase === 'betting' && Object.keys(currentBets).length === 0) {
+                const curBal = useRouletteStore.getState().balance;
+                if (curBal !== data.userCoins) {
+                  useRouletteStore.getState().resetBalance(data.userCoins);
+                  useGameStore.getState().resetBalance(data.userCoins);
+                  try {
+                    localStorage.setItem('playin_user_coins', String(data.userCoins));
+                    localStorage.setItem('playin_coins', String(data.userCoins));
+                  } catch {}
+                }
+              }
+            }
           })
           .catch(() => {});
       };

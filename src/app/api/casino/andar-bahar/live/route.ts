@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
     const currentRound = Math.floor(now / 20000);
     const cycleOffset = now % 20000;
 
-    // Betting only allowed during first 5 seconds of round
-    if (roundId !== currentRound || cycleOffset >= 5000) {
+    // Bets for current round accepted before card dealing settlement begins (15s)
+    if (roundId !== currentRound || cycleOffset >= 15000) {
       return NextResponse.json(
         { success: false, error: 'BETS_CLOSED', message: 'Betting is closed for this round.' },
         { status: 403 }

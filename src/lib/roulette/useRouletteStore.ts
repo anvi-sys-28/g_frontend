@@ -90,12 +90,16 @@ function persistBalance(bal: number) {
     localStorage.setItem(STORAGE_KEY_BALANCE, String(bal));
     localStorage.setItem('probability_playground_balance', String(bal));
     localStorage.setItem('playin_user_coins', String(bal));
+    localStorage.setItem('playin_coins', String(bal));
+    window.dispatchEvent(new Event('playin_auth_changed'));
   }
 }
 
 function getInitialBalance(): number {
   if (typeof window !== 'undefined') {
-    const userCoins = localStorage.getItem('playin_user_coins');
+    const userCoins =
+      localStorage.getItem('playin_user_coins') ||
+      localStorage.getItem('playin_coins');
     if (userCoins && !isNaN(Number(userCoins))) {
       return Number(userCoins);
     }

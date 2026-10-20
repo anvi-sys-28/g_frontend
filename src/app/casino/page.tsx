@@ -83,6 +83,7 @@ export default function CasinoPage() {
           setPendingRequest(data.user.pendingRequest || null);
           try {
             localStorage.setItem('playin_user_coins', String(data.user.coins));
+            localStorage.setItem('playin_coins', String(data.user.coins));
           } catch {}
         }
       }

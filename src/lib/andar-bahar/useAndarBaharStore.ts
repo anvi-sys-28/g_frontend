@@ -258,6 +258,8 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
                   sharedStore.resetBalance(data.newBalance);
                   try {
                     localStorage.setItem('playin_user_coins', String(data.newBalance));
+                    localStorage.setItem('playin_coins', String(data.newBalance));
+                    window.dispatchEvent(new Event('playin_auth_changed'));
                   } catch {}
                 }
               })
@@ -312,6 +314,8 @@ export const useAndarBaharStore = create<AndarBaharState>((set, get) => {
                   sharedStore.resetBalance(data.newBalance);
                   try {
                     localStorage.setItem('playin_user_coins', String(data.newBalance));
+                    localStorage.setItem('playin_coins', String(data.newBalance));
+                    window.dispatchEvent(new Event('playin_auth_changed'));
                   } catch {}
                 }
               })

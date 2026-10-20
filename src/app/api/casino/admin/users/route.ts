@@ -8,9 +8,7 @@ export async function GET() {
     const andarBaharStats = casinoStore.getGameStats('ANDAR_BAHAR');
 
     const users = rawUsers.map((u) => {
-      const userBets = [...rouletteStats.recentBets, ...andarBaharStats.recentBets].filter(
-        (b) => b.userId.toLowerCase() === u.userId.toLowerCase()
-      );
+      const userBets = casinoStore.getUserBets(u.userId);
       const wins = userBets.filter((b) => b.won).length;
       const losses = userBets.filter((b) => !b.won).length;
       const totalWagered = userBets.reduce((acc, b) => acc + b.betAmount, 0);

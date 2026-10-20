@@ -7,26 +7,16 @@ export async function POST(req: NextRequest) {
     const { roundId, userId, playerName, winningNumber, payout, won, details } = body;
 
     const cleanUser = String(userId || 'vip_player').trim();
-    let newBalance = 0;
+    const wager = Number(details?.totalWager) || 0;
 
-    // Credit payout if player won
-    if (won && Number(payout) > 0) {
-      newBalance = casinoStore.creditCoinsForWin(cleanUser, Number(payout), 'ROULETTE', roundId);
-    } else {
-      const u = casinoStore.getUser(cleanUser);
-      newBalance = u?.coins || 0;
-    }
-
-    // Record settled bet in persistent store
-    casinoStore.recordSettledBet({
+    const { newBalance, betRecord } = casinoStore.settleRound({
       userId: cleanUser,
       playerName: playerName || cleanUser,
       game: 'ROULETTE',
       roundId: Number(roundId) || 0,
-      betAmount: Number(details?.totalWager) || 0,
+      wager,
       payout: Number(payout) || 0,
       won: Boolean(won),
-      balanceAfter: newBalance,
       details: {
         winningNumber,
         ...details,
@@ -36,8 +26,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       newBalance,
-      won,
-      payout,
+      won: Boolean(won),
+      payout: Number(payout) || 0,
+      betRecord,
     });
   } catch (err: any) {
     return NextResponse.json(

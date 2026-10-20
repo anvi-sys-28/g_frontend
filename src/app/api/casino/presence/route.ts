@@ -13,10 +13,19 @@ export async function POST(req: NextRequest) {
     const rouletteOnline = casinoStore.getOnlineCount('ROULETTE');
     const andarBaharOnline = casinoStore.getOnlineCount('ANDAR_BAHAR');
 
+    let userCoins: number | undefined = undefined;
+    if (userId) {
+      const u = casinoStore.getUser(userId);
+      if (u) {
+        userCoins = u.coins;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       roulette: rouletteOnline,
       andarBahar: andarBaharOnline,
+      userCoins,
     });
   } catch (err: any) {
     return NextResponse.json(

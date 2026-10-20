@@ -92,6 +92,21 @@ export default function AndarBaharPage() {
             if (data?.andarBahar?.count !== undefined) {
               useAndarBaharStore.setState({ activePlayersCount: data.andarBahar.count });
             }
+            if (data?.userCoins !== undefined && data.userCoins !== null) {
+              const currentPhase = useAndarBaharStore.getState().livePhase;
+              const selectedSide = useAndarBaharStore.getState().selectedSide;
+              if (currentPhase === 'betting' && selectedSide === null) {
+                const curBal = useGameStore.getState().balance;
+                if (curBal !== data.userCoins) {
+                  useGameStore.getState().resetBalance(data.userCoins);
+                  useRouletteStore.getState().resetBalance(data.userCoins);
+                  try {
+                    localStorage.setItem('playin_user_coins', String(data.userCoins));
+                    localStorage.setItem('playin_coins', String(data.userCoins));
+                  } catch {}
+                }
+              }
+            }
           })
           .catch(() => {});
       };

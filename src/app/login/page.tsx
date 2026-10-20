@@ -50,6 +50,9 @@ export default function LoginPage() {
       localStorage.setItem('playin_user_id', data.user.userId);
       localStorage.setItem('playin_role', data.user.role);
       localStorage.setItem('playin_coins', String(data.user.coins));
+      localStorage.setItem('playin_user_coins', String(data.user.coins));
+      localStorage.setItem('roulette_balance', String(data.user.coins));
+      localStorage.setItem('probability_playground_balance', String(data.user.coins));
       window.dispatchEvent(new Event('playin_auth_changed'));
 
       setIsLoading(false);
