@@ -45,6 +45,10 @@ export default function RoulettePage() {
   const recentNumbers = useRouletteStore((s) => s.recentNumbers);
   const toggleStats = useRouletteStore((s) => s.toggleStats);
   const syncLiveTick = useRouletteStore((s) => s.syncLiveTick);
+  const livePhase = useRouletteStore((s) => s.livePhase);
+  const spinState = useRouletteStore((s) => s.spinState);
+  const liveRoundId = useRouletteStore((s) => s.liveRoundId);
+  const isResultTime = livePhase === 'settled' || spinState === 'settled';
 
   const activeBetsList = Object.values(bets);
   const summary = calculateTableSummary(activeBetsList, wheelType);
@@ -211,8 +215,8 @@ export default function RoulettePage() {
       <div className="relative w-full h-[36vh] sm:h-[320px] bg-transparent shrink-0 overflow-hidden">
         <RouletteWheel3D />
 
-        {/* Live Winners Chat Overlay on the video scene (YouTube style) */}
-        <LiveWinnersChatOverlay game="ROULETTE" />
+        {/* Live Winners Chat Overlay on the video scene (Only at result time till betting opens) */}
+        <LiveWinnersChatOverlay game="ROULETTE" isResultTime={isResultTime} roundId={liveRoundId} />
 
         {/* Last Results Glass Card on Top Right */}
         <LastResultsCard />

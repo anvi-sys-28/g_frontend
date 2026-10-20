@@ -42,6 +42,10 @@ export default function AndarBaharPage() {
   const toggleStats = useAndarBaharStore((s) => s.toggleStats);
   const recentResults = useAndarBaharStore((s) => s.recentResults);
   const syncLiveTick = useAndarBaharStore((s) => s.syncLiveTick);
+  const livePhase = useAndarBaharStore((s) => s.livePhase);
+  const gameState = useAndarBaharStore((s) => s.gameState);
+  const liveRoundId = useAndarBaharStore((s) => s.liveRoundId);
+  const isResultTime = livePhase === 'settled' || gameState === 'round_settled';
 
   // Synchronous Live Andar Bahar Loop (100ms tick for sub-second precision countdown & phase syncing)
   React.useEffect(() => {
@@ -220,8 +224,8 @@ export default function AndarBaharPage() {
       <div className="relative w-full h-[42vh] sm:h-[370px] bg-transparent shrink-0 overflow-hidden">
         <DealerTable3D />
 
-        {/* Live Winners Chat Overlay on the video scene (YouTube style) */}
-        <LiveWinnersChatOverlay game="ANDAR_BAHAR" />
+        {/* Live Winners Chat Overlay on the video scene (Only at result time till betting opens) */}
+        <LiveWinnersChatOverlay game="ANDAR_BAHAR" isResultTime={isResultTime} roundId={liveRoundId} />
       </div>
 
       {/* Synchronized Live Round Countdown & Status Banner */}

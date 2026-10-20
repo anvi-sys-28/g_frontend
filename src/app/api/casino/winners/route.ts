@@ -7,6 +7,7 @@ export interface WinnerEvent {
   avatarColor: string;
   game: 'ROULETTE' | 'ANDAR_BAHAR';
   payout: number;
+  roundId?: number;
   timestamp: number;
   isRealUser?: boolean;
 }
@@ -27,27 +28,45 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const gameParam = searchParams.get('game')?.toUpperCase();
     const game = (gameParam === 'ROULETTE' || gameParam === 'ANDAR_BAHAR') ? (gameParam as 'ROULETTE' | 'ANDAR_BAHAR') : undefined;
+    const roundIdParam = searchParams.get('roundId');
+    const roundId = roundIdParam ? Number(roundIdParam) : undefined;
 
     // Fetch REAL settled winning bets strictly from persistent casinoStore
     const realSettled = casinoStore.getRecentWinners(game, 30);
 
-    // Map strictly real settled bets into WinnerEvents (NO MOCK DATA)
-    const winners: WinnerEvent[] = realSettled.map((bet, idx) => {
-      const gradient = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
-      return {
-        id: bet.id,
-        playerName: bet.playerName || bet.userId,
-        avatarColor: gradient,
-        game: bet.game,
-        payout: bet.payout,
-        timestamp: new Date(bet.createdAt).getTime(),
-        isRealUser: true,
-      };
-    });
+    // If roundId is specified, find winners for that round; fallback to most recent settled round
+    let matching = roundId
+      ? realSettled.filter((b) => b.roundId === roundId)
+      : realSettled;
+
+    if (matching.length === 0 && realSettled.length > 0) {
+      const latestRoundId = realSettled[0].roundId;
+      matching = realSettled.filter((b) => b.roundId === latestRoundId);
+    }
+
+    // Deduplicate by playerName / userId to guarantee each user profile appears AT MOST ONCE
+    const userWinsMap = new Map<string, WinnerEvent>();
+
+    for (const bet of matching) {
+      const userKey = (bet.playerName || bet.userId).toLowerCase().trim();
+      if (!userWinsMap.has(userKey)) {
+        const gradient = AVATAR_GRADIENTS[userWinsMap.size % AVATAR_GRADIENTS.length];
+        userWinsMap.set(userKey, {
+          id: bet.id,
+          playerName: bet.playerName || bet.userId,
+          avatarColor: gradient,
+          game: bet.game,
+          payout: bet.payout,
+          roundId: bet.roundId,
+          timestamp: new Date(bet.createdAt).getTime(),
+          isRealUser: true,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      winners,
+      winners: Array.from(userWinsMap.values()),
     });
   } catch (err: any) {
     return NextResponse.json(
