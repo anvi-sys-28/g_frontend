@@ -72,58 +72,96 @@ export function IntroVideoPlayer({
     router.push('/');
   };
 
-  // Preload initial buffer
+  // Asset-based fast initialization: Wait for fonts + first frame, with 3s fallback
   useEffect(() => {
     let isCancelled = false;
 
-    const preloadBuffer = () => {
-      const initialCount = 50;
-      for (let i = 1; i <= initialCount; i++) {
-        if (isCancelled) break;
+    // 3-second fallback safety timer: ensure user is NEVER blocked
+    const fallbackTimer = setTimeout(() => {
+      if (!isCancelled && !isStarted && !hasEnded) {
+        setIsStarted(true);
+      }
+    }, 3000);
+
+    const initAssets = async () => {
+      // 1. Wait for critical fonts
+      try {
+        if (typeof document !== 'undefined' && document.fonts) {
+          await document.fonts.ready;
+        }
+      } catch {}
+
+      if (isCancelled) return;
+
+      // 2. Preload first 3 frames only (lightweight, zero network stalling)
+      const firstImg = new window.Image();
+      firstImg.src = getFrameUrl(1);
+      imagesCache.current.set(1, firstImg);
+
+      // Preload next 2 frames in background
+      for (let i = 2; i <= 3; i++) {
+        const nextImg = new window.Image();
+        nextImg.src = getFrameUrl(i);
+        imagesCache.current.set(i, nextImg);
+      }
+
+      if (firstImg.complete) {
+        if (!isCancelled) setIsStarted(true);
+      } else {
+        firstImg.onload = () => {
+          if (!isCancelled) setIsStarted(true);
+        };
+        firstImg.onerror = () => {
+          if (!isCancelled) setIsStarted(true);
+        };
+      }
+    };
+
+    initAssets();
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(fallbackTimer);
+    };
+  }, [getFrameUrl, isStarted, hasEnded]);
+
+  // Progressive on-demand stream buffer (prunes old frames, buffers 8 ahead)
+  useEffect(() => {
+    if (!isStarted || hasEnded) return;
+
+    let isCancelled = false;
+
+    const streamAhead = () => {
+      if (isCancelled || hasEnded) return;
+
+      const current = currentFrameIndex.current;
+      const targetEnd = Math.min(current + 8, totalFrames);
+
+      // Buffer ahead 8 frames
+      for (let i = current; i <= targetEnd; i++) {
         if (!imagesCache.current.has(i)) {
           const img = new window.Image();
           img.src = getFrameUrl(i);
           imagesCache.current.set(i, img);
         }
       }
-      if (!isCancelled) setIsStarted(true);
-    };
 
-    preloadBuffer();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [getFrameUrl]);
-
-  // Buffer ahead as the video plays
-  useEffect(() => {
-    if (!isStarted || hasEnded) return;
-
-    let isCancelled = false;
-    let nextBatchStart = 51;
-
-    const bufferAhead = () => {
-      if (isCancelled || hasEnded || nextBatchStart > totalFrames) return;
-
-      const batchEnd = Math.min(nextBatchStart + 30, totalFrames);
-      for (; nextBatchStart <= batchEnd; nextBatchStart++) {
-        if (!imagesCache.current.has(nextBatchStart)) {
-          const img = new window.Image();
-          img.src = getFrameUrl(nextBatchStart);
-          imagesCache.current.set(nextBatchStart, img);
+      // Memory management: prune frames older than (current - 12) to keep JS heap light
+      if (imagesCache.current.size > 25) {
+        for (const [k] of imagesCache.current) {
+          if (k < current - 12) {
+            imagesCache.current.delete(k);
+          }
         }
       }
-
-      if (nextBatchStart <= totalFrames) {
-        setTimeout(bufferAhead, 35);
-      }
     };
 
-    bufferAhead();
+    const intervalId = setInterval(streamAhead, 100);
+    streamAhead();
 
     return () => {
       isCancelled = true;
+      clearInterval(intervalId);
     };
   }, [isStarted, hasEnded, getFrameUrl, totalFrames]);
 

@@ -76,13 +76,9 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
     }
   };
 
-  // Auto-fetch fresh live data on mount if initial render had no live matches or fallback data
+  // Auto-fetch fresh live data on mount ONLY if initial render had no matches
   useEffect(() => {
-    const shouldFetch =
-      matches.length === 0 ||
-      matches.every((m) => m.status !== 'live') ||
-      currentMeta.provider === 'fallback';
-    if (shouldFetch) {
+    if (matches.length === 0) {
       handleGetData(false);
     }
   }, []);
@@ -199,9 +195,10 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
     return () => clearInterval(interval);
   }, [isCarouselPaused, carouselMatches.length]);
 
-  // Auto-cycle promotional hero banner every 5 seconds
+  // Auto-cycle promotional hero banner every 5 seconds (paused when tab hidden)
   useEffect(() => {
     const bannerInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       setBannerSlide((prev) => (prev + 1) % 3);
     }, 5000);
     return () => clearInterval(bannerInterval);
@@ -282,7 +279,7 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
 
   const heroBanners = [
     {
-      image: '/hero-banner.jpg',
+      image: '/hero-banner.webp',
       tag: 'LIVE',
       title: 'CRICKET',
       subtitle: 'REAL ACTION. REAL ODDS.',
@@ -447,6 +444,11 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
             <img
               src={heroBanners[bannerSlide].image}
               alt="Live Cricket Promotion"
+              width={1100}
+              height={240}
+              fetchPriority={bannerSlide === 0 ? 'high' : 'auto'}
+              loading={bannerSlide === 0 ? 'eager' : 'lazy'}
+              decoding="async"
               className="w-full h-full object-cover object-center transition-all duration-700 ease-in-out scale-100 hover:scale-105"
             />
 
@@ -607,6 +609,10 @@ export function MatchListView({ initialMatches, meta, isMock }: MatchListViewPro
                     <img
                       src={seriesVisual}
                       alt={group.name}
+                      width={1200}
+                      height={562}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover object-right opacity-50 mix-blend-screen scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/75 to-transparent" />

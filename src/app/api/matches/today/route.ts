@@ -7,7 +7,13 @@ export async function GET(request: Request) {
 
   try {
     const data = await getTodayMatches(forceRefresh);
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': forceRefresh
+          ? 'no-store, max-age=0'
+          : 'public, s-maxage=5, stale-while-revalidate=25',
+      },
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: 'Failed to retrieve today matches', message: err.message },

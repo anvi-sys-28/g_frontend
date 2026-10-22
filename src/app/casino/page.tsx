@@ -292,11 +292,11 @@ export default function CasinoPage() {
         <img
           src="/mcb.webp"
           alt=""
+          width={800}
+          height={1600}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-center md:hidden pointer-events-none select-none"
-          style={{
-            transform: 'translate3d(0, 0, 0)',
-            WebkitTransform: 'translate3d(0, 0, 0)',
-          }}
         />
 
         {/* Desktop / Computer Casino Background (>= 768px): pcb.webp */}
@@ -304,11 +304,11 @@ export default function CasinoPage() {
         <img
           src="/pcb.webp"
           alt=""
+          width={1400}
+          height={732}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-center hidden md:block pointer-events-none select-none"
-          style={{
-            transform: 'translate3d(0, 0, 0)',
-            WebkitTransform: 'translate3d(0, 0, 0)',
-          }}
         />
 
         {/* Ambient Dark Gradient Overlays for Maximum Contrast & Depth */}
@@ -463,6 +463,10 @@ export default function CasinoPage() {
                 <img
                   src="/1.webp"
                   alt="Roulette"
+                  width={600}
+                  height={600}
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xs"
                 />
                 <div className="absolute inset-0 bg-black/50" />
@@ -676,6 +680,10 @@ export default function CasinoPage() {
                 <img
                   src="/2.webp"
                   alt="Andar Bahar"
+                  width={600}
+                  height={600}
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xs"
                 />
                 <div className="absolute inset-0 bg-black/50" />

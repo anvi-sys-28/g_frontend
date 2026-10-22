@@ -455,7 +455,7 @@ async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
     try {
       const res = await fetch(`https://api.cricapi.com/v1/cricScore?apikey=${key}`, {
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(3000),
       });
 
       if (res.status === 429) {
@@ -529,7 +529,7 @@ async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
     try {
       const res = await fetch(`https://api.cricapi.com/v1/currentMatches?apikey=${key}&offset=0`, {
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(7000),
+        signal: AbortSignal.timeout(3000),
       });
 
       if (res.status === 429) {
@@ -623,6 +623,31 @@ async function fetchFromCricApiPool(): Promise<TodayMatchesResponse | null> {
 }
 
 export async function getTodayMatches(forceRefresh = false): Promise<TodayMatchesResponse> {
+  // During build phase, return fallback immediately to prevent network socket hangup
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return {
+      matches: FALLBACK_MATCHES,
+      meta: {
+        provider: 'fallback',
+        dailyBudget: 300,
+        usableBudget: 240,
+        callsToday: 0,
+        remainingBudget: 240,
+        lastSuccessfulFetch: new Date().toISOString(),
+        lastError: null,
+        nextScheduledPoll: null,
+        pollIntervalMs: 60000,
+        isBudgetExhausted: false,
+        totalMatches: FALLBACK_MATCHES.length,
+        liveMatches: 0,
+        upcomingMatches: FALLBACK_MATCHES.filter((m) => m.status === 'upcoming').length,
+        finishedMatches: FALLBACK_MATCHES.filter((m) => m.status === 'completed' || m.status === 'abandoned').length,
+        updatedAt: new Date().toISOString(),
+      },
+      isMock: true,
+    };
+  }
+
   // If not forcing refresh, return in-memory cached data if fresh (15 seconds TTL)
   if (!forceRefresh && todayMatchesCache && Date.now() - todayMatchesCache.timestamp < CACHE_TTL_MS) {
     return todayMatchesCache.response;

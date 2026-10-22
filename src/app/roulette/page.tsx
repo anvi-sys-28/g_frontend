@@ -11,8 +11,6 @@ import { ChipSelector } from '@/components/roulette/ChipSelector';
 import { ActionBar } from '@/components/roulette/ActionBar';
 import { RecentResults } from '@/components/roulette/RecentResults';
 import { WinningBadge } from '@/components/roulette/WinningBadge';
-import { StatsSheet } from '@/components/roulette/StatsSheet';
-import { SettingsModal } from '@/components/roulette/SettingsModal';
 import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import { useGameStore } from '@/lib/shared/useGameStore';
 import {
@@ -22,6 +20,16 @@ import {
 } from '@/lib/roulette/rouletteEngine';
 import { Calculator, Sparkles, TrendingDown, BookOpen } from 'lucide-react';
 import { LiveWinnersChatOverlay } from '@/components/casino/LiveWinnersChatOverlay';
+
+const StatsSheet = dynamic(
+  () => import('@/components/roulette/StatsSheet').then((mod) => mod.StatsSheet),
+  { ssr: false }
+);
+
+const SettingsModal = dynamic(
+  () => import('@/components/roulette/SettingsModal').then((mod) => mod.SettingsModal),
+  { ssr: false }
+);
 
 // Dynamically import Three.js 3D Wheel with SSR disabled
 const RouletteWheel3D = dynamic(

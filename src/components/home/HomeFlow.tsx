@@ -1,11 +1,30 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Match } from '@/types/models';
 import { MatchesDataMeta } from '@/lib/matches';
-import { MatchListView } from '@/components/cricket/MatchListView';
-import { IntroVideoPlayer } from '@/components/intro/IntroVideoPlayer';
-import LoginPage from '@/app/login/page';
+
+const IntroVideoPlayer = dynamic(
+  () => import('@/components/intro/IntroVideoPlayer').then((m) => m.IntroVideoPlayer),
+  { ssr: false }
+);
+
+const LoginPage = dynamic(
+  () => import('@/app/login/page'),
+  { ssr: false }
+);
+
+const MatchListView = dynamic(
+  () => import('@/components/cricket/MatchListView').then((m) => m.MatchListView),
+  {
+    loading: () => (
+      <div className="w-full min-h-screen bg-[#0c0d12] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
+      </div>
+    ),
+  }
+);
 
 interface HomeFlowProps {
   initialMatches: Match[];
@@ -98,7 +117,7 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
   // Step 2: Login Interface with ID, Password, Player Demo Preset, and Skip Login
   if (currentStep === 'login') {
     return (
-      <div className="fixed inset-0 z-50 bg-black overflow-y-auto overscroll-contain">
+      <div className="fixed inset-0 z-50 bg-black overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         <LoginPage />
       </div>
     );
@@ -119,11 +138,6 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
           bottom: 0,
           width: '100vw',
           height: '100lvh',
-          transform: 'translate3d(0, 0, 0)',
-          WebkitTransform: 'translate3d(0, 0, 0)',
-          willChange: 'transform',
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
         }}
       >
         {/* Mobile Cricket Background (< 768px): mbc.webp */}
@@ -131,11 +145,11 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
         <img
           src="/mbc.webp"
           alt=""
+          width={800}
+          height={1600}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-center md:hidden pointer-events-none select-none"
-          style={{
-            transform: 'translate3d(0, 0, 0)',
-            WebkitTransform: 'translate3d(0, 0, 0)',
-          }}
         />
 
         {/* Desktop / Computer Cricket Background (>= 768px): pbc.webp */}
@@ -143,11 +157,11 @@ export function HomeFlow({ initialMatches, meta, isMock }: HomeFlowProps) {
         <img
           src="/pbc.webp"
           alt=""
+          width={1300}
+          height={750}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-center hidden md:block pointer-events-none select-none"
-          style={{
-            transform: 'translate3d(0, 0, 0)',
-            WebkitTransform: 'translate3d(0, 0, 0)',
-          }}
         />
 
         {/* Atmospheric Dark Gradient Overlays - Softened so stadium background is clearly visible */}

@@ -10,14 +10,22 @@ import { ChipRow } from '@/components/andar-bahar/ChipRow';
 import { DealButton } from '@/components/andar-bahar/DealButton';
 import { LiveAndarBaharBanner } from '@/components/andar-bahar/LiveAndarBaharBanner';
 import { WinnerBanner } from '@/components/andar-bahar/WinnerBanner';
-import { AndarBaharStatsSheet } from '@/components/andar-bahar/AndarBaharStatsSheet';
-import { AndarBaharSettingsModal } from '@/components/andar-bahar/AndarBaharSettingsModal';
 import { useAndarBaharStore } from '@/lib/andar-bahar/useAndarBaharStore';
 import { useGameStore } from '@/lib/shared/useGameStore';
 import { useRouletteStore } from '@/lib/roulette/useRouletteStore';
 import { getExactProbabilities } from '@/lib/andar-bahar/andarBaharEngine';
 import { Calculator, Sparkles, BookOpen, TrendingDown, Layers } from 'lucide-react';
 import { LiveWinnersChatOverlay } from '@/components/casino/LiveWinnersChatOverlay';
+
+const AndarBaharStatsSheet = dynamic(
+  () => import('@/components/andar-bahar/AndarBaharStatsSheet').then((mod) => mod.AndarBaharStatsSheet),
+  { ssr: false }
+);
+
+const AndarBaharSettingsModal = dynamic(
+  () => import('@/components/andar-bahar/AndarBaharSettingsModal').then((mod) => mod.AndarBaharSettingsModal),
+  { ssr: false }
+);
 
 // Dynamically import Three.js 3D Dealer Table with SSR disabled
 const DealerTable3D = dynamic(

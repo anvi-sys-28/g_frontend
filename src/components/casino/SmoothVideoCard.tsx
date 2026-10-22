@@ -212,6 +212,10 @@ export function SmoothVideoCard({
         <img
           src={posterSrc}
           alt={title}
+          width={640}
+          height={400}
+          loading="lazy"
+          decoding="async"
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
             isPlaying ? 'opacity-0' : 'opacity-100'
           }`}

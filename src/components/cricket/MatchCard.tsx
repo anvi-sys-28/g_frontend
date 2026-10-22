@@ -60,6 +60,10 @@ export function MatchCard({
           <img
             src={selectedBg}
             alt="Match Stadium Visual"
+            width={600}
+            height={300}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover object-right opacity-60 mix-blend-screen scale-105 transition-transform duration-500 group-hover:scale-110"
           />
           {/* Left smooth fade gradient so team text & scores remain 100% legible */}

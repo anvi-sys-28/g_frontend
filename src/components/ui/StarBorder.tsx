@@ -277,10 +277,16 @@ export const StarBorder = <T extends ElementType = 'button'>({
     let last = performance.now();
     let alive = true;
 
+    const isLowEnd = typeof navigator !== 'undefined' && (
+      (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
+      ((navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4)
+    );
+    const maxDpr = isLowEnd ? 1 : 1.5;
+
     const measure = () => {
       state.width = root.offsetWidth;
       state.height = root.offsetHeight;
-      state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      state.dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
       canvas.width = Math.max(1, Math.round((state.width + BLEED * 2) * state.dpr));
       canvas.height = Math.max(1, Math.round((state.height + BLEED * 2) * state.dpr));
       wake();
@@ -326,7 +332,7 @@ export const StarBorder = <T extends ElementType = 'button'>({
       tip = true
     ) => {
       if (length < 0.5 || intensity <= 0) return;
-      const steps = clamp(Math.ceil(length / 2), 2, 90);
+      const steps = clamp(Math.ceil(length / (isLowEnd ? 5 : 2)), 2, isLowEnd ? 24 : 90);
       pointAt(shape, head, point);
       let px = point.x;
       let py = point.y;
@@ -481,6 +487,7 @@ export const StarBorder = <T extends ElementType = 'button'>({
     const frame = (now: number) => {
       raf = 0;
       if (!alive) return;
+      if (typeof document !== 'undefined' && document.hidden) return;
       const s = settingsRef.current;
       const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
       last = now;
@@ -615,10 +622,27 @@ export const StarBorder = <T extends ElementType = 'button'>({
     root.addEventListener('blur', onBlur);
     measure();
 
+    const onVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      } else if (state.visible) {
+        wake();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+
     return () => {
       alive = false;
       wakeRef.current = null;
       cancelAnimationFrame(raf);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      }
       resizeObserver.disconnect();
       visibility.disconnect();
       root.removeEventListener('pointerenter', onEnter as EventListener);

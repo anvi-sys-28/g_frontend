@@ -34,11 +34,11 @@ export function AppShell({ children, sideColumn }: AppShellProps) {
         <img
           src="/gm.webp"
           alt="Game Mobile Background"
+          width={900}
+          height={1600}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-center md:hidden pointer-events-none select-none"
-          style={{
-            transform: 'translate3d(0, 0, 0)',
-            WebkitTransform: 'translate3d(0, 0, 0)',
-          }}
         />
 
         {/* Desktop / Computer Game Background (>= 768px): gp.webp */}
@@ -46,11 +46,11 @@ export function AppShell({ children, sideColumn }: AppShellProps) {
         <img
           src="/gp.webp"
           alt="Game Desktop Background"
+          width={1600}
+          height={900}
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-center hidden md:block pointer-events-none select-none"
-          style={{
-            transform: 'translate3d(0, 0, 0)',
-            WebkitTransform: 'translate3d(0, 0, 0)',
-          }}
         />
       </div>
 

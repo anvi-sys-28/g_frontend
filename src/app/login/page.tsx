@@ -81,18 +81,19 @@ export default function LoginPage() {
 
   return (
     <div
-      className="relative min-h-[100dvh] w-full flex flex-col justify-between overflow-x-hidden overflow-y-auto bg-black select-none"
-      style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain' }}
+      className="relative min-h-screen min-h-[100dvh] w-full flex flex-col justify-between overflow-x-hidden bg-black"
+      style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {/* Mobile Background (< 768px): ml.webp */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/ml.webp"
         alt="Bet Adda Mobile Background"
+        width={900}
+        height={1600}
         fetchPriority="high"
         decoding="async"
         className="fixed inset-0 w-full h-full object-cover object-top pointer-events-none md:hidden"
-        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
       />
 
       {/* Desktop Background (>= 768px): lb.webp */}
@@ -100,10 +101,11 @@ export default function LoginPage() {
       <img
         src="/lb.webp"
         alt="Bet Adda Desktop Background"
+        width={1400}
+        height={731}
         fetchPriority="high"
         decoding="async"
         className="fixed inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none hidden md:block"
-        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
       />
 
       {/* Ambient Vignette Overlays: Subtle on mobile so luxury background artwork is clearly visible */}
